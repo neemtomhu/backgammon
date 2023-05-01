@@ -1,66 +1,8 @@
 import cv2
 import numpy as np
 import itertools
-from sklearn.cluster import KMeans
-
-# def detect_backgammon_board(input_img):
-#     gray = cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
-#     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-#     edges = cv2.Canny(blurred, 50, 200)
-#
-#     # Detect lines using Hough Line Transform
-#     lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 100, minLineLength=100, maxLineGap=10)
-#
-#     if lines is not None:
-#         for line in lines:
-#             x1, y1, x2, y2 = line[0]
-#             cv2.line(input_img, (x1, y1), (x2, y2), (0, 255, 0), 2)
-#
-#     return input_img
 
 
-# def get_lines_intersection(line1, line2):
-#     rho1, theta1 = line1
-#     rho2, theta2 = line2
-#     A = np.array([
-#         [np.cos(theta1), np.sin(theta1)],
-#         [np.cos(theta2), np.sin(theta2)]
-#     ])
-#     b = np.array([[rho1], [rho2]])
-#
-#     if np.abs(np.linalg.det(A)) > 1e-5:
-#         x0, y0 = np.linalg.solve(A, b)
-#         x0, y0 = int(np.round(x0)), int(np.round(y0))
-#         return [x0, y0]
-#     else:
-#         return None
-#
-#
-# def detect_backgammon_board(input_img):
-#     gray = cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
-#     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-#     edges = cv2.Canny(blurred, 50, 200)
-#
-#     cv2.imshow('edges', edges)
-#
-#     lines = cv2.HoughLines(edges, 1, np.pi / 180, 100)
-#
-#     if lines is not None:
-#         # Cluster lines based on their angles
-#         angles = np.array([line[0][1] for line in lines])
-#         kmeans = KMeans(n_clusters=2, random_state=0).fit(angles.reshape(-1, 1))
-#         labels = kmeans.labels_
-#
-#         # Find parallel line pairs
-#         parallel_line_pairs = []
-#         for label in np.unique(labels):
-#             label_indices = np.where(labels == label)[0]
-#             label_lines = lines[label_indices]
-#             sorted_lines = sorted(label_lines, key=lambda x: x[0][0], reverse=True)
-#             for i in range(len(sorted_lines) - 1):
-#                 line1 = sorted_lines[i]
-#                 line2 = sorted_lines[i + 1]
-#                 parallel_line_pairs.append((line
 def is_horizontal_or_vertical(theta, tolerance_degrees=10):
     horizontal = np.pi / 2
     tolerance_radians = np.deg2rad(tolerance_degrees)
@@ -74,29 +16,32 @@ def distance(p1, p2):
     return np.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
 
 
-def recursive_group_circles(circles, circle, group, max_distance, processed):
-    for i, other_circle in enumerate(circles):
-        if i not in processed:
-            if distance(circle[:2], other_circle[:2]) <= max_distance:
-                group.append(other_circle)
-                processed.add(i)
-                group, processed = recursive_group_circles(circles, other_circle, group, max_distance, processed)
-    return group, processed
-
-
 def group_circles_based_on_distance(circles, max_distance):
+
     processed = set()
     groups = []
 
     for i, circle in enumerate(circles):
         if i not in processed:
-            group, processed = recursive_group_circles(circles, circle, [circle], max_distance, processed)
+            group = [circle]
+            queue = [circle]
+            processed.add(i)
+
+            while queue:
+                current_circle = queue.pop(0)
+                for j, other_circle in enumerate(circles):
+                    if j not in processed:
+                        if distance(current_circle[:2], other_circle[:2]) <= max_distance:
+                            group.append(other_circle)
+                            queue.append(other_circle)
+                            processed.add(j)
+
             groups.append(group)
 
     return groups
 
 
-def find_similar_groups(groups, orientation, threshold_factor):
+def find_opposite_groups(groups, orientation, threshold_factor):
     paired_groups = []
     used_indices = set()
     diameters = [circle[2] for group in groups for circle in group]
@@ -206,7 +151,7 @@ def detect_backgammon_board(input_img):
     print("The board orientation is:", orientation)
 
     threshold_factor = 5
-    paired_groups = find_similar_groups(groups, orientation, threshold_factor)
+    paired_groups = find_opposite_groups(groups, orientation, threshold_factor)
     paired_groups_image = draw_circle_groups_pairs(input_img, paired_groups)
     cv2.imshow("Circle groups", paired_groups_image)
 
