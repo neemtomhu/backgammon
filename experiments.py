@@ -61,11 +61,7 @@ def find_opposite_groups(groups, orientation, threshold_factor, angle_threshold=
                 continue
 
             avg_coord2 = np.mean(group2, axis=0)
-
-            if orientation == "horizontal":
-                diff = abs(avg_coord1[0] - avg_coord2[0])
-            else:
-                diff = abs(avg_coord1[1] - avg_coord2[1])
+            diff = abs(avg_coord1[1 - (orientation == "horizontal")] - avg_coord2[1 - (orientation == "horizontal")])
 
             if diff < best_match_diff:
                 line1 = group1[-1] - group1[0]
@@ -153,7 +149,7 @@ def search_for_missing_checkers(input_img, checker_color, avg_x, avg_y):
     return missing_checkers
 
 
-def color_cluster_size(input_img, x, y, visited, threshold=0.8):
+def color_cluster_size(input_img, x, y, visited):
     if (x, y) in visited:
         return 0
 
@@ -166,7 +162,7 @@ def color_cluster_size(input_img, x, y, visited, threshold=0.8):
     for nx, ny in neighbors:
         if 0 <= nx < input_img.shape[1] and 0 <= ny < input_img.shape[0]:
             if np.array_equal(input_img[ny, nx], color) and (nx, ny) not in visited:
-                cluster_size += color_cluster_size(input_img, nx, ny, visited, threshold)
+                cluster_size += color_cluster_size(input_img, nx, ny, visited)
 
     return cluster_size
 
@@ -268,7 +264,7 @@ def detect_backgammon_board(input_img):
 
 if __name__ == "__main__":
     LOG = init_logging()
-    input_img1 = cv2.imread("/Users/geri/Desktop/MSc/diploma/project/Screenshot1.png")
+    input_img1 = cv2.imread("/Users/geri/Desktop/MSc/diploma/project/Screenshot2.png")
     LOG.info('Opened image')
     detected_img = detect_backgammon_board(input_img1)
     # cv2.imshow("Detected Backgammon Board", detected_img)
