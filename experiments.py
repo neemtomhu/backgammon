@@ -33,7 +33,15 @@ def group_circles_based_on_distance(circles, max_distance):
     return groups
 
 
-def find_opposite_groups(groups, orientation, threshold_factor):
+def angle_between_lines(line1, line2):
+    unit_vector_1 = line1 / np.linalg.norm(line1)
+    unit_vector_2 = line2 / np.linalg.norm(line2)
+    dot_product = np.dot(unit_vector_1, unit_vector_2)
+    angle = np.arccos(dot_product)
+    return np.degrees(angle)
+
+
+def find_opposite_groups(groups, orientation, threshold_factor, angle_threshold=15):
     paired_groups = []
     used_indices = set()
     diameters = [circle[2] for group in groups for circle in group]
@@ -60,8 +68,13 @@ def find_opposite_groups(groups, orientation, threshold_factor):
                 diff = abs(avg_coord1[1] - avg_coord2[1])
 
             if diff < best_match_diff:
-                best_match_diff = diff
-                best_match_index = j
+                line1 = group1[-1] - group1[0]
+                line2 = group2[-1] - group2[0]
+                angle = angle_between_lines(line1[:2], line2[:2])
+
+                if angle < angle_threshold or abs(angle - 180) < angle_threshold:
+                    best_match_diff = diff
+                    best_match_index = j
 
         if best_match_index != -1 and best_match_diff <= threshold:
             paired_groups.append((group1, groups[best_match_index]))
@@ -217,20 +230,18 @@ def detect_backgammon_board(input_img):
     blurred = cv2.GaussianBlur(contrast_enhanced, (5, 5), 0)
 
     # Apply morphological closing to fill gaps in circles
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
     closed = cv2.morphologyEx(blurred, cv2.MORPH_CLOSE, kernel)
 
-    # edges = cv2.Canny(closed, 50, 150)
-    # cv2.imshow('Edges', edges)
-
     # Use the Hough Circle Transform to find circles
-    circles = cv2.HoughCircles(closed, cv2.HOUGH_GRADIENT, dp=1, minDist=20, param1=50, param2=30, minRadius=10, maxRadius=30)
+    circles = cv2.HoughCircles(closed, cv2.HOUGH_GRADIENT, dp=1, minDist=35, param1=25, param2=24, minRadius=15, maxRadius=29)
     radii = [circle[2] for circle in circles[0]]
     diameters = [2 * radius for radius in radii]
     median_diameter = np.median(diameters)
+    LOG.info(f'Median checker diameter: {median_diameter}')
 
     # Calculate max_distance as a function of the median diameter
-    max_distance = median_diameter * 1.3  # Adjust the multiplier as needed
+    max_distance = median_diameter * 1.2  # Adjust the multiplier as needed
 
     groups = group_circles_based_on_distance(circles[0], max_distance)
 
@@ -240,6 +251,7 @@ def detect_backgammon_board(input_img):
         circles = np.uint16(np.around(circles))
         for i in circles[0, :]:
             cv2.circle(detected_img, (i[0], i[1]), i[2], (0, 255, 0), 2)
+    cv2.imshow('Circles', detected_img)
 
     orientation = get_board_orientation(groups)
     LOG.info(f"The board orientation is: {orientation}")
@@ -249,7 +261,6 @@ def detect_backgammon_board(input_img):
     paired_groups_image = draw_circle_groups_pairs(input_img, paired_groups)
     draw_roi_rectangle(paired_groups_image, paired_groups)
     cv2.imshow("Circle groups", paired_groups_image)
-    cv2.imshow("ROI", input_img)
     find_missing_checkers(paired_groups, input_img)
 
     return detected_img
@@ -260,6 +271,6 @@ if __name__ == "__main__":
     input_img1 = cv2.imread("/Users/geri/Desktop/MSc/diploma/project/Screenshot1.png")
     LOG.info('Opened image')
     detected_img = detect_backgammon_board(input_img1)
-    cv2.imshow("Detected Backgammon Board", detected_img)
+    # cv2.imshow("Detected Backgammon Board", detected_img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
