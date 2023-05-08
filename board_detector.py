@@ -34,8 +34,14 @@ def group_circles_based_on_distance(circles, max_distance):
 
 
 def angle_between_lines(line1, line2):
-    unit_vector_1 = line1 / np.linalg.norm(line1)
-    unit_vector_2 = line2 / np.linalg.norm(line2)
+    norm1 = np.linalg.norm(line1)
+    norm2 = np.linalg.norm(line2)
+
+    if norm1 == 0 or norm2 == 0:
+        return 0
+
+    unit_vector_1 = line1 / norm1
+    unit_vector_2 = line2 / norm2
     dot_product = np.dot(unit_vector_1, unit_vector_2)
     angle = np.arccos(dot_product)
     return np.degrees(angle)
@@ -216,6 +222,7 @@ def draw_roi_rectangle(input_img, paired_groups):
 
 def detect_backgammon_board(input_img):
     LOG.info('Detecting board')
+    LOG.info(f'Input image height: {input_img.shape[0]}, width: {input_img.shape[1]}')
     # Convert the image to grayscale
     gray = cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
 
@@ -230,8 +237,22 @@ def detect_backgammon_board(input_img):
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
     closed = cv2.morphologyEx(blurred, cv2.MORPH_CLOSE, kernel)
 
+    # Predict checker diameter with a strict search
+    circles = cv2.HoughCircles(closed, cv2.HOUGH_GRADIENT, dp=1, minDist=20, param1=25, param2=35, minRadius=12, maxRadius=29)
+    radii = [circle[2] for circle in circles[0]]
+    predicted_radius = np.median(radii)
+    LOG.info(f'Predicted median checker diameter: {predicted_radius}')
+    min_dist = int(predicted_radius * 1.8)
+    min_radius = int(predicted_radius * 0.76)
+    max_radius = int(predicted_radius * 1.25)
+
     # Use the Hough Circle Transform to find circles
-    circles = cv2.HoughCircles(closed, cv2.HOUGH_GRADIENT, dp=1, minDist=35, param1=25, param2=24, minRadius=15, maxRadius=29)
+    circles = cv2.HoughCircles(closed, cv2.HOUGH_GRADIENT, dp=1,
+                               minDist=min_dist,
+                               param1=25,
+                               param2=24,
+                               minRadius=min_radius,
+                               maxRadius=max_radius)
     radii = [circle[2] for circle in circles[0]]
     diameters = [2 * radius for radius in radii]
     median_diameter = np.median(diameters)
