@@ -13,7 +13,14 @@ def main():
     root = tk.Tk()
     root.withdraw()
 
-    file_path = filedialog.askopenfilename(title="Select MOV file", filetypes=[("MOV files", "*.mov")])
+    file_path = filedialog.askopenfilename(
+        title="Select Video file",
+        filetypes=[
+            ("Video files", "*.mov;*.mp4"),
+            ("MOV files", "*.mov"),
+            ("MP4 files", "*.mp4"),
+        ],
+    )
 
     cap = cv2.VideoCapture(file_path)
     ret, frame = cap.read()
