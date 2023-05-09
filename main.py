@@ -26,7 +26,7 @@ def main():
     ret, frame = cap.read()
 
     image = frame.copy()
-    roi = detect_backgammon_board(image)
+    detected_img, roi = detect_backgammon_board(image)
 
     if roi is not None:
         cv2.waitKey(0)

@@ -206,9 +206,11 @@ def get_board_orientation(groups):
     return "horizontal" if horizontal_count > vertical_count else "vertical"
 
 
-def draw_roi_rectangle(input_img, paired_groups):
+def get_board_corners(paired_groups):
     circle_groups = [group for groups in paired_groups for group in groups]
     all_circles = [circle for group in circle_groups for circle in group]
+
+    # add some padding around the circles
     radius = all_circles[0][2] * 1.3
     LOG.info(f"Adding radius {radius}")
 
@@ -217,7 +219,18 @@ def draw_roi_rectangle(input_img, paired_groups):
     x_max = int(np.max(all_checkers[:, 0]).round() + radius)
     y_min = int(np.min(all_checkers[:, 1]).round() - radius)
     y_max = int(np.max(all_checkers[:, 1]).round() + radius)
-    cv2.rectangle(input_img, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
+
+    top_left = (x_min, y_min)
+    top_right = (x_max, y_min)
+    bottom_left = (x_min, y_max)
+    bottom_right = (x_max, y_max)
+
+    return top_left, top_right, bottom_left, bottom_right
+
+
+def draw_rectangle(input_img, corners):
+    img = input_img.copy()
+    return cv2.rectangle(img, (corners[0]), (corners[3]), (0, 255, 0), 2)
 
 
 def detect_backgammon_board(input_img):
@@ -277,8 +290,9 @@ def detect_backgammon_board(input_img):
     threshold_factor = 5
     paired_groups = find_opposite_groups(groups, orientation, threshold_factor)
     paired_groups_image = draw_circle_groups_pairs(input_img, paired_groups)
-    draw_roi_rectangle(paired_groups_image, paired_groups)
-    cv2.imshow("Circle groups", paired_groups_image)
+    roi = get_board_corners(paired_groups)
+    detected_board_image = draw_rectangle(paired_groups_image, roi)
+    cv2.imshow('Detected board', detected_board_image)
     find_missing_checkers(paired_groups, input_img)
 
-    return detected_img
+    return detected_img, roi
