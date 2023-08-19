@@ -1,7 +1,10 @@
 import cv2
 import numpy as np
 import itertools
+
 from utils.logger import LOG
+from utils.utils import draw_group_axes, order_checkers, rotate_input_image_clockwise
+from visuals import BoardVisuals
 
 
 def distance(p1, p2):
@@ -9,7 +12,7 @@ def distance(p1, p2):
 
 
 def group_circles_based_on_distance(circles, max_distance):
-    LOG.info('Grouping circles')
+    LOG.info('Grouping circles on fields')
     processed = set()
     groups = []
 
@@ -86,75 +89,6 @@ def find_opposite_groups(groups, orientation, threshold_factor, angle_threshold=
     return paired_groups
 
 
-def find_missing_checkers(paired_groups, input_img):
-    for group1, group2 in paired_groups:
-        count1 = len(group1)
-        count2 = len(group2)
-
-        if count1 != count2:
-            LOG.info(f"Checker count mismatch: {count1} vs {count2}")
-            # Implement your strategy to find missing checkers here
-            # For example, you can use a different set of parameters for HoughCircles
-            # or try other image processing techniques to detect missing checkers
-            missing_checkers = find_missing_checkers_using_heuristics(input_img, group1, group2)
-            # Update the groups with the found checkers
-            if missing_checkers:
-                if count1 < count2:
-                    group1.extend(missing_checkers)
-                else:
-                    group2.extend(missing_checkers)
-                LOG.info(f"Found {len(missing_checkers)} missing checkers")
-
-    return paired_groups
-
-
-def find_missing_checkers_using_heuristics(input_img, group1, group2):
-    missing_checkers = []
-
-    # Determine which group has fewer checkers and calculate the average position of checkers
-    if len(group1) < len(group2):
-        smaller_group = group1
-        larger_group = group2
-    else:
-        smaller_group = group2
-        larger_group = group1
-
-    avg_x = int(np.mean([circle[0] for circle in smaller_group]))
-    avg_y = int(np.mean([circle[1] for circle in smaller_group]))
-
-    # Get the color of the missing checkers
-    x, y, _ = smaller_group[0]
-    x, y = int(x), int(y)  # Add this line to convert x and y to integers
-    checker_color = input_img[y, x]
-
-    missing_checkers = search_for_missing_checkers(input_img, checker_color, avg_x, avg_y)
-
-    LOG.info(f"Missing checker found: {len(missing_checkers)}")
-    return missing_checkers
-
-
-def search_for_missing_checkers(input_img, checker_color, avg_x, avg_y):
-    missing_checkers = []
-    visited = set()
-
-    search_radius = 50
-    x_min = max(0, avg_x - search_radius)
-    x_max = min(input_img.shape[1] - 1, avg_x + search_radius)
-    y_min = max(0, avg_y - search_radius)
-    y_max = min(input_img.shape[0] - 1, avg_y + search_radius)
-
-    for y in range(y_min, y_max):
-        for x in range(x_min, x_max):
-            if np.array_equal(input_img[y, x], checker_color) and (x, y) not in visited:
-                cluster_size = color_cluster_size(input_img, x, y, visited)
-
-                # Customize the cluster size threshold to match the expected size of a checker
-                if cluster_size > 30:  # Adjust this threshold as needed
-                    missing_checkers.append((x, y, 15))  # Assuming a fixed radius for missing checkers
-
-    return missing_checkers
-
-
 def color_cluster_size(input_img, x, y, visited):
     if (x, y) in visited:
         return 0
@@ -179,10 +113,15 @@ def draw_circle_groups_pairs(img, group_pairs):
 
     for i, pair in enumerate(group_pairs):
         color = colors[i % len(colors)]
-        for group in pair:
+        for j, group in enumerate(pair):
             for circle in group:
                 x, y, radius = map(int, circle)
                 cv2.circle(output, (x, y), radius, color, 2)
+
+            # Put a number on each group, calculate the position based on the circles in the group
+            avg_x = int(sum([circle[0] for circle in group]) / len(group))
+            avg_y = int(sum([circle[1] for circle in group]) / len(group))
+            cv2.putText(output, str(i+1), (avg_x, avg_y), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
 
     return output
 
@@ -203,7 +142,10 @@ def get_board_orientation(groups):
         else:
             horizontal_count += 1
 
-    return "horizontal" if horizontal_count > vertical_count else "vertical"
+    orientation = "horizontal" if horizontal_count > vertical_count else "vertical"
+    LOG.info(f"The board orientation is: {orientation}")
+
+    return orientation
 
 
 def get_board_corners(paired_groups):
@@ -224,6 +166,7 @@ def get_board_corners(paired_groups):
     top_right = (x_max, y_min)
     bottom_left = (x_min, y_max)
     bottom_right = (x_max, y_max)
+    LOG.info(f'Corners: {top_left, top_right, bottom_left, bottom_right}')
 
     return top_left, top_right, bottom_left, bottom_right
 
@@ -234,8 +177,16 @@ def draw_rectangle(input_img, corners):
 
 
 def detect_backgammon_board(input_img):
+    BoardVisuals.BackgammonBoardVisuals.initialize((0, 0), "vertical")
+
     LOG.info('Detecting board')
+
+    # If the input image is horizontally aligned, rotate 90 degrees
+    if input_img.shape[0] < input_img.shape[1]:
+        input_img = rotate_input_image_clockwise(input_img)
     LOG.info(f'Input image height: {input_img.shape[0]}, width: {input_img.shape[1]}')
+
+
     # Convert the image to grayscale
     gray = cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
 
@@ -285,14 +236,14 @@ def detect_backgammon_board(input_img):
     cv2.imshow('Circles', detected_img)
 
     orientation = get_board_orientation(groups)
-    LOG.info(f"The board orientation is: {orientation}")
+    paired_groups = find_opposite_groups(groups, orientation, 5)
+    ordered_paired_groups = order_checkers(paired_groups, orientation)
 
-    threshold_factor = 5
-    paired_groups = find_opposite_groups(groups, orientation, threshold_factor)
-    paired_groups_image = draw_circle_groups_pairs(input_img, paired_groups)
-    roi = get_board_corners(paired_groups)
-    detected_board_image = draw_rectangle(paired_groups_image, roi)
-    cv2.imshow('Detected board', detected_board_image)
-    find_missing_checkers(paired_groups, input_img)
+    BoardVisuals.BackgammonBoardVisuals.orientation = orientation
+    paired_groups_image = draw_circle_groups_pairs(input_img, ordered_paired_groups)
+    BoardVisuals.BackgammonBoardVisuals.corners = get_board_corners(paired_groups)
+    detected_board_image = draw_rectangle(paired_groups_image, BoardVisuals.BackgammonBoardVisuals.corners)
+    detected_img = draw_group_axes(detected_board_image, ordered_paired_groups)
+    cv2.imshow('Detected board', detected_img)
 
-    return detected_img, roi
+    return detected_img

@@ -1,8 +1,7 @@
 import cv2
 import tkinter as tk
 from tkinter import filedialog
-from board_detector import detect_backgammon_board
-from utils.logger import LOG
+from visuals.board_detector import detect_backgammon_board
 
 
 class BoardData:
@@ -26,9 +25,9 @@ def main():
     ret, frame = cap.read()
 
     image = frame.copy()
-    detected_img, roi = detect_backgammon_board(image)
+    detected_img = detect_backgammon_board(image)
 
-    if roi is not None:
+    if detected_img is not None:
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
