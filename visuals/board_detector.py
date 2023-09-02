@@ -8,7 +8,7 @@ from visuals import BoardVisuals
 
 
 def distance(p1, p2):
-    return np.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
+    return np.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
 
 
 def group_circles_based_on_distance(circles, max_distance):
@@ -50,7 +50,7 @@ def angle_between_lines(line1, line2):
     return np.degrees(angle)
 
 
-def find_opposite_groups(groups, orientation, threshold_factor, angle_threshold=15):
+def find_opposite_groups(groups, threshold_factor, angle_threshold=15):
     paired_groups = []
     used_indices = set()
     diameters = [circle[2] for group in groups for circle in group]
@@ -70,7 +70,7 @@ def find_opposite_groups(groups, orientation, threshold_factor, angle_threshold=
                 continue
 
             avg_coord2 = np.mean(group2, axis=0)
-            diff = abs(avg_coord1[1 - (orientation == "horizontal")] - avg_coord2[1 - (orientation == "horizontal")])
+            diff = abs(avg_coord1[1] - avg_coord2[1])
 
             if diff < best_match_diff:
                 line1 = group1[-1] - group1[0]
@@ -121,7 +121,7 @@ def draw_circle_groups_pairs(img, group_pairs):
             # Put a number on each group, calculate the position based on the circles in the group
             avg_x = int(sum([circle[0] for circle in group]) / len(group))
             avg_y = int(sum([circle[1] for circle in group]) / len(group))
-            cv2.putText(output, str(i+1), (avg_x, avg_y), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+            cv2.putText(output, str(i + 1), (avg_x, avg_y), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
 
     return output
 
@@ -181,42 +181,12 @@ def detect_backgammon_board(input_img):
 
     LOG.info('Detecting board')
 
-    # If the input image is horizontally aligned, rotate 90 degrees
-    if input_img.shape[0] < input_img.shape[1]:
-        input_img = rotate_input_image_clockwise(input_img)
-    LOG.info(f'Input image height: {input_img.shape[0]}, width: {input_img.shape[1]}')
-
-
-    # Convert the image to grayscale
-    gray = cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
-
-    # Apply CLAHE to enhance the contrast
-    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
-    contrast_enhanced = clahe.apply(gray)
-
-    # Apply a Gaussian blur to reduce noise
-    blurred = cv2.GaussianBlur(contrast_enhanced, (5, 5), 0)
-
-    # Apply morphological closing to fill gaps in circles
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
-    closed = cv2.morphologyEx(blurred, cv2.MORPH_CLOSE, kernel)
-
-    # Predict checker diameter with a strict search
-    circles = cv2.HoughCircles(closed, cv2.HOUGH_GRADIENT, dp=1, minDist=20, param1=25, param2=35, minRadius=12, maxRadius=29)
-    radii = [circle[2] for circle in circles[0]]
-    predicted_radius = np.median(radii)
-    LOG.info(f'Predicted median checker diameter: {predicted_radius}')
-    min_dist = int(predicted_radius * 1.8)
-    min_radius = int(predicted_radius * 0.76)
-    max_radius = int(predicted_radius * 1.25)
-
-    # Use the Hough Circle Transform to find circles
-    circles = cv2.HoughCircles(closed, cv2.HOUGH_GRADIENT, dp=1,
-                               minDist=min_dist,
-                               param1=25,
-                               param2=24,
-                               minRadius=min_radius,
-                               maxRadius=max_radius)
+    input_img = rotate_if_needed(input_img)
+    gray = convert_to_gray(input_img)
+    contrast_enhanced = apply_clahe(gray)
+    closed = preprocess_image(contrast_enhanced)
+    predicted_radius = predict_checker_diameter(closed)
+    circles = find_circles(closed, predicted_radius)
     radii = [circle[2] for circle in circles[0]]
     diameters = [2 * radius for radius in radii]
     median_diameter = np.median(diameters)
@@ -235,11 +205,11 @@ def detect_backgammon_board(input_img):
             cv2.circle(detected_img, (i[0], i[1]), i[2], (0, 255, 0), 2)
     cv2.imshow('Circles', detected_img)
 
-    orientation = get_board_orientation(groups)
-    paired_groups = find_opposite_groups(groups, orientation, 5)
-    ordered_paired_groups = order_checkers(paired_groups, orientation)
+    # orientation = get_board_orientation(groups)
+    paired_groups = find_opposite_groups(groups, 5)
+    ordered_paired_groups = order_checkers(paired_groups)
 
-    BoardVisuals.BackgammonBoardVisuals.orientation = orientation
+    # BoardVisuals.BackgammonBoardVisuals.orientation = orientation
     paired_groups_image = draw_circle_groups_pairs(input_img, ordered_paired_groups)
     BoardVisuals.BackgammonBoardVisuals.corners = get_board_corners(paired_groups)
     detected_board_image = draw_rectangle(paired_groups_image, BoardVisuals.BackgammonBoardVisuals.corners)
@@ -247,3 +217,44 @@ def detect_backgammon_board(input_img):
     cv2.imshow('Detected board', detected_img)
 
     return detected_img
+
+
+def rotate_if_needed(input_img):
+    if input_img.shape[0] < input_img.shape[1]:
+        return rotate_input_image_clockwise(input_img)
+    LOG.info(f'Input image height: {input_img.shape[0]}, width: {input_img.shape[1]}')
+    return input_img
+
+
+def convert_to_gray(input_img):
+    return cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
+
+
+def apply_clahe(gray):
+    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+    return clahe.apply(gray)
+
+
+def preprocess_image(contrast_enhanced):
+    blurred = cv2.GaussianBlur(contrast_enhanced, (5, 5), 0)
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+    return cv2.morphologyEx(blurred, cv2.MORPH_CLOSE, kernel)
+
+
+def predict_checker_diameter(closed):
+    circles = cv2.HoughCircles(closed, cv2.HOUGH_GRADIENT, dp=1, minDist=20, param1=25, param2=35, minRadius=12,
+                               maxRadius=29)
+    radii = [circle[2] for circle in circles[0]]
+    return np.median(radii)
+
+
+def find_circles(closed, predicted_radius):
+    min_dist = int(predicted_radius * 1.8)
+    min_radius = int(predicted_radius * 0.76)
+    max_radius = int(predicted_radius * 1.25)
+    return cv2.HoughCircles(closed, cv2.HOUGH_GRADIENT, dp=1,
+                            minDist=min_dist,
+                            param1=25,
+                            param2=24,
+                            minRadius=min_radius,
+                            maxRadius=max_radius)

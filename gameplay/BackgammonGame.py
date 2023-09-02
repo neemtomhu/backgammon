@@ -3,7 +3,7 @@ from gameplay.BackgammonBoard import BackgammonBoard
 # TODO store field lines
 # TODO connect visuals to game representation
 # TODO fine tuned checker search
-# TODO image transition
+# TODO image transition, game flow
 
 
 class BackgammonGame:
