@@ -190,6 +190,7 @@ def detect_backgammon_board(input_img):
     radii = [circle[2] for circle in circles[0]]
     diameters = [2 * radius for radius in radii]
     median_diameter = np.median(diameters)
+    BoardVisuals.BackgammonBoardVisuals.checker_diameter = median_diameter
     LOG.info(f'Median checker diameter: {median_diameter}')
 
     # Calculate max_distance as a function of the median diameter

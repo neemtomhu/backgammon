@@ -10,6 +10,7 @@ class BackgammonBoardVisuals(Observable):
     corners = None  # top_left, top_right, bottom_left, bottom_right
     fields = None
     orientation = None
+    checker_diameter = None
 
     def __new__(cls, *args, **kwargs):
         if not cls._instance:

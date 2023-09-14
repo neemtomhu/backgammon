@@ -5,4 +5,4 @@ from utils.logger import LOG
 
 
 # def find_nearby_checkers(input_img, checker_group, distance_threshold_factor=2.5):
-
+# TODO detect checkers on field
