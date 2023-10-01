@@ -204,7 +204,7 @@ def detect_backgammon_board(input_img):
         circles = np.uint16(np.around(circles))
         for i in circles[0, :]:
             cv2.circle(detected_img, (i[0], i[1]), i[2], (0, 255, 0), 2)
-    cv2.imshow('Circles', detected_img)
+    # cv2.imshow('Circles', detected_img)
 
     # orientation = get_board_orientation(groups)
     paired_groups = find_opposite_groups(groups, 5)
@@ -215,7 +215,8 @@ def detect_backgammon_board(input_img):
     BoardVisuals.BackgammonBoardVisuals.corners = get_board_corners(paired_groups)
     detected_board_image = draw_rectangle(paired_groups_image, BoardVisuals.BackgammonBoardVisuals.corners)
     detected_img = draw_group_axes(detected_board_image, ordered_paired_groups)
-    cv2.imshow('Detected board', detected_img)
+    LOG.info('Board detected')
+    # cv2.imshow('Detected board', detected_img)
 
     return detected_img
 

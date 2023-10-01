@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 
 from utils.logger import LOG
@@ -16,6 +18,29 @@ class BackgammonBoardVisuals(Observable):
         if not cls._instance:
             cls._instance = super(BackgammonBoardVisuals, cls).__new__(cls)
         return cls._instance
+
+    def get_field_by_id(self, field_id):
+        return self.fields[field_id]
+
+    def get_nearest_field_id(self, x, y):
+        min_distance = float('inf')
+        nearest_field_id = None
+
+        for field_id, field in enumerate(self.fields):
+            if field is not None:
+                # Calculate the center of the field
+                cx = (field.endpoints[0] + field.endpoints[2]) / 2
+                cy = (field.endpoints[1] + field.endpoints[3]) / 2
+
+                # Calculate the distance from the center to the given x, y
+                distance = math.sqrt((cx - x) ** 2 + (cy - y) ** 2)
+
+                # Update the nearest field id
+                if distance < min_distance:
+                    min_distance = distance
+                    nearest_field_id = field_id
+
+        return nearest_field_id
 
     @staticmethod
     def initialize(corners, orientation):
@@ -89,7 +114,7 @@ class BackgammonBoardVisuals(Observable):
 
 class Field:
     def __init__(self, endpoints, field_number, checkers):
-        self.endpoints = [int(endpoint) for endpoint in endpoints]  # tuple representing the center of the field
+        self.endpoints = [int(endpoint) for endpoint in endpoints]  # tuple representing the center line of the field
         self.field_number = field_number  # integer between 1 and 24
         self.checkers = checkers  # list of Checker objects
 
