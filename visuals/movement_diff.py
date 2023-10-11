@@ -12,7 +12,7 @@ from visuals.dicedetection.dice_detector import detect_dice_sized_diff, detect_d
 
 def get_anchor_frame(cap, start_pos=1, time_limit_secs=10):
     LOG.info('Detecting anchor frame')
-    LOG.info(cv2.__version__)
+    LOG.info(f'OpenCV version: {cv2.__version__}')
 
     # Set the starting position
     cap.set(cv2.CAP_PROP_POS_FRAMES, start_pos)
@@ -66,8 +66,8 @@ def get_anchor_frame(cap, start_pos=1, time_limit_secs=10):
     return anchor_frame_pos
 
 
-def get_next_move_frame(cap, anchor_frame_pos, calm_duration_secs=2):
-    LOG.info('Detecting movement frame after anchor frame')
+def get_next_move_frame(cap, anchor_frame_pos, calm_duration_secs=1.5):
+    LOG.debug('Detecting movement frame after anchor frame')
     lower_threshold = ((BoardVisuals.BackgammonBoardVisuals.checker_diameter / 2) ** 2 * math.pi) * 1
     upper_threshold = ((BoardVisuals.BackgammonBoardVisuals.checker_diameter / 2) ** 2 * math.pi) * 3
 
@@ -128,7 +128,7 @@ def get_next_move_frame(cap, anchor_frame_pos, calm_duration_secs=2):
         LOG.debug(
             f'Frame count: {frame_count}\n lower_threshold={lower_threshold}, upper_threshold={upper_threshold}, valid_area={valid_area}')
 
-    LOG.info(f'Detected movement frame position: {stable_frame_pos}')
+    LOG.debug(f'Detected movement frame position: {stable_frame_pos}')
     return stable_frame_pos
 
 
@@ -215,6 +215,10 @@ def extract_difference(img1, img2, threshold=20):
 
 
 def detect_movement_type(img):
+    dice_values = []
+    moved_from = []
+    moved_to = []
+
     # Look for checker sized changes
     detected_img, circles = detect_dice_sized_diff(
         img,
@@ -224,7 +228,7 @@ def detect_movement_type(img):
 
     if circles is not None:
         LOG.info('Checker movement detected')
-        get_checker_movement(detected_img, circles)
+        moved_from, moved_to = get_checker_movement(detected_img, circles)
         # return "Checker movement"
 
     # Look fod dice sized changes
@@ -235,5 +239,45 @@ def detect_movement_type(img):
         param2=17)
     if circles is not None:
         LOG.info('Dice roll detected')
-        detect_dice_value(detected_img, circles)
+        dice_values = detect_dice_value(detected_img, circles)
         # return "Dice roll"
+    LOG.info(f'dice_values: {dice_values}, moved_from: {moved_from}, moved_to: {moved_to}')
+    return dice_values, moved_from, moved_to
+
+
+def calculate_dice_roll_from_move(removed_from, moved_to):
+    # Check if the lengths of the lists are valid
+    if len(removed_from) != len(moved_to) or len(removed_from) > 2 or len(moved_to) > 2:
+        raise ValueError("Invalid input lists")
+
+    # Calculate the distances for each checker movement
+    distances = [abs(removed - moved) for removed, moved in zip(removed_from, moved_to)]
+
+    # If only one checker is moved
+    if len(distances) == 1:
+        distance = distances[0]
+        possible_rolls = {(min(i, distance - i), max(i, distance - i)) for i in range(1, 7) if 1 <= distance - i <= 6}
+        return list(possible_rolls)
+
+    # If two checkers are moved
+    else:
+        possible_rolls = set()
+        for i in range(1, 7):
+            for j in range(1, 7):
+                if (i == distances[0] and j == distances[1]) or (i == distances[1] and j == distances[0]):
+                    possible_rolls.add((min(i, j), max(i, j)))
+        return list(possible_rolls)
+
+
+def get_most_likely_dice_roll(self, possible_dice_rolls, removed_from, moved_to):
+    # Calculate the absolute differences between the starting and ending positions
+    distances = [abs(end - start) for start, end in zip(removed_from, moved_to)]
+
+    # Count how many times each possible dice roll appears in the distances
+    dice_counts = {dice: distances.count(dice) for dice in possible_dice_rolls}
+
+    # Sort the possible dice rolls based on their counts in descending order
+    sorted_dice = sorted(dice_counts.keys(), key=lambda x: dice_counts[x], reverse=True)
+
+    # Return the two most likely dice rolls
+    return sorted_dice[:2]

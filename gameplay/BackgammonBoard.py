@@ -1,3 +1,6 @@
+from utils.logger import LOG
+
+
 class BackgammonBoard:
     def __init__(self):
         self.board = [
@@ -27,6 +30,7 @@ class BackgammonBoard:
         self.board[start] -= player
 
     def move_checker(self, start, end, player):
+        LOG.info(f'Move {start} -> {end}')
         if self.checker_on_point_can_be_hit(end, player):
             self.board[end] = 0
             if player < 1:
@@ -35,3 +39,4 @@ class BackgammonBoard:
                 self.board[25] += player * -1
         self.board[start] -= player
         self.board[end] += player
+        LOG.info(f'Board: {self.board}')

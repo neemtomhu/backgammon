@@ -1,4 +1,5 @@
 import logging
+import math
 
 import cv2
 import numpy as np
@@ -22,7 +23,7 @@ def detect_dice_sized_diff(img, min_radius_multiplier, max_radius_multiplier, pa
     # Detect circles (potential dice)
     min_radius = int(BoardVisuals.BackgammonBoardVisuals.checker_diameter * min_radius_multiplier)
     max_radius = int(BoardVisuals.BackgammonBoardVisuals.checker_diameter * max_radius_multiplier)
-    LOG.info(f'Min radius: {min_radius}, Max radius: {max_radius}')
+    LOG.debug(f'Min radius: {min_radius}, Max radius: {max_radius}')
 
     circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT,
                                dp=1.2,
@@ -51,7 +52,7 @@ def detect_dice_value(img, circles):
         dice_values = []
 
         for (x, y, r) in circles:
-            r += 2  # expand the circle to ensure all blobs are properly visible
+            r += 6  # expand the circle to ensure all blobs are properly visible
             # Draw the circle in the output image
             cv2.circle(img, (x, y), r + 10, (0, 255, 0), 1)
             LOG.info(f"Dice radius: {r}")
@@ -61,7 +62,8 @@ def detect_dice_value(img, circles):
 
             params = cv2.SimpleBlobDetector_Params()
             params.filterByArea = True
-            params.minArea = 10  # Adjust as needed
+            params.minArea = 20  # Adjust as needed
+            params.maxArea = 40
             params.filterByCircularity = True
             params.minCircularity = 0.8  # Adjust as needed
 
@@ -70,13 +72,16 @@ def detect_dice_value(img, circles):
 
             # Detect black blobs on the dice
             keypoints = detector.detect(roi)
+
             if keypoints:
+                LOG.info(f'Blob size: {math.pi * (keypoints[0].size / 2.0)**2}')
                 dice_values.append(len(keypoints))
             else:
                 # Detect white blobs on the dice
                 params.blobColor = 255
                 detector = cv2.SimpleBlobDetector_create(params)
                 keypoints = detector.detect(roi)
+                dice_values.append(len(keypoints))
 
             LOG.info(f'Dice value detected: {len(keypoints)}')
 
@@ -87,6 +92,7 @@ def detect_dice_value(img, circles):
                 adjusted_y = int(keypoint.pt[1] + y - r)
                 cv2.circle(img, (adjusted_x, adjusted_y), int(keypoint.size), (0, 0, 255), 2)
 
+        dice_values.sort()
         return dice_values
 
     return []

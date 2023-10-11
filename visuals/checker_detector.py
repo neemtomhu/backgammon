@@ -6,6 +6,8 @@ from visuals import BoardVisuals
 
 
 def get_checker_movement(img, circles):
+    moved_from = []
+    moved_to = []
     # Convert the image to grayscale
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     # Apply thresholding
@@ -13,23 +15,25 @@ def get_checker_movement(img, circles):
 
     squares = find_squares(thresh)
 
-    movements = []
-    for (x, y, r) in circles:
-        for square in squares:
-            sx, sy, sw, sh = square  # assuming square is a tuple (x, y, width, height)
+    for square in squares:
+        sx, sy, sw, sh = square  # assuming square is a tuple (x, y, width, height)
+        circle_found = False  # flag to keep track of whether a circle was found in this square
+        for (x, y, r) in circles:
             if is_circle_in_square((x, y, r), sx, sy, sw, sh):
-                cx, cy = get_square_centre(sx, sy, sw, sh)
-                field = BoardVisuals.BackgammonBoardVisuals().get_nearest_field_id(cx, cy)
+                circle_found = True  # set the flag to True since a circle was found
+                # cx, cy = get_square_centre(sx, sy, sw, sh)
+                field = BoardVisuals.BackgammonBoardVisuals().get_nearest_field_id(x, y)
                 LOG.info(f'Checker moved to field: {field}')
-                movements.append({
-                    'circle': (x, y, r),
-                    'square': square
-                })
-        cv2.circle(img, (x, y), r, (0, 255, 0), 1)
+                moved_to.append(field)
+                cv2.circle(img, (x, y), r, (0, 255, 0), 1)
+        if not circle_found:
+            field = BoardVisuals.BackgammonBoardVisuals().get_nearest_field_id(sx, sy)
+            LOG.info(f'Checker moved from field: {field}')
+            moved_from.append(field)
     # cv2.imshow('Detected checker movements', img)
     # cv2.waitKey(1)
     # return movements
-    return None  # TODO figure out how to return detected changes
+    return moved_from, moved_to
 
 
 def find_squares(thresh_img):
@@ -45,7 +49,10 @@ def find_squares(thresh_img):
         # If the polygon has 4 vertices, it is considered as a square
         if len(approx) == 4:
             x, y, w, h = cv2.boundingRect(contour)
-            squares.append((x, y, w, h))
+            # Filter out squares that are smaller than a checker
+            threshold_diameter = BoardVisuals.BackgammonBoardVisuals.checker_diameter * 0.9
+            if w > threshold_diameter and h > threshold_diameter:
+                squares.append((x, y, w, h))
     LOG.info(f'Squares found: {len(squares)}')
     return squares
 

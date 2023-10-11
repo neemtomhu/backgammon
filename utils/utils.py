@@ -65,7 +65,7 @@ def reorder_checkers_within_groups(paired_groups):
 
 def draw_field(img, field):
     if field:
-        LOG.info(f'Endpoints: {field.endpoints}')
+        LOG.debug(f'Endpoints: {field.endpoints}')
         cv2.line(img, (field.endpoints[0], field.endpoints[1]), (field.endpoints[2], field.endpoints[3]), (255, 255, 255), 1)
     return img
 

@@ -1,10 +1,16 @@
 import logging
 
+from utils.VideoTimeFilter import VideoTimeFilter
 
-def init_logging():
-    logging.basicConfig(format='%(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s: %(message)s',
-                        level=logging.INFO)
-    return logging
+LOG = logging.getLogger()
 
 
-LOG = init_logging()
+def init_logging(cap):
+    logging.basicConfig(
+        format='%(video_time)s - %(filename)s[line:%(lineno)d] - %(levelname)s: %(message)s',
+        level=logging.INFO)
+
+    # Add the filter to the root logger
+    LOG.addFilter(VideoTimeFilter(cap))
+
+    return LOG

@@ -23,6 +23,7 @@ class BackgammonBoardVisuals(Observable):
         return self.fields[field_id]
 
     def get_nearest_field_id(self, x, y):
+        LOG.debug(f'Calculating nearest field to x={x}, y={y}')
         min_distance = float('inf')
         nearest_field_id = None
 
@@ -49,6 +50,12 @@ class BackgammonBoardVisuals(Observable):
         BackgammonBoardVisuals.orientation = orientation
 
     def set_starting_fields_from_checker_groups(self, ordered_paired_groups):
+        # Calculate bar position
+        self.fields[0] = Field([self.corners[0][0],
+                               ((self.corners[0][1] + self.corners[2][1]) / 2),
+                               self.corners[1][0],
+                               ((self.corners[1][1] + self.corners[3][1]) / 2)], 0, 0)
+
         # Calculate field 1 and 24
         field_1_x1, field_1_y1, field_1_x2, field_1_y2, field_24_x1, field_24_y1, field_24_x2, field_24_y2 = \
             self.get_field_endpoints_from_group(ordered_paired_groups[0])
@@ -86,6 +93,7 @@ class BackgammonBoardVisuals(Observable):
                 if not (i == 8 or i == 17):
                     LOG.info(f'Calculating field: {i}')
                     self.fields[i] = self.calculate_field(start, end, distance, i, offset)
+                    LOG.info(f'Field[{i}]: {self.fields[i].endpoints}')
 
     def get_field_endpoints_from_group(self, checker_group_pair):
         group1 = checker_group_pair[0]
