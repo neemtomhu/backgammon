@@ -23,6 +23,7 @@ class BackgammonGame:
             self.dice *= 2  # can be played four times
 
     def make_move(self, start, end):
+        LOG.info(f'Attempting move: dice={self.dice}, start={start}, end={end}')
         distance = abs(start - end)
         player = self.turn
 
@@ -48,18 +49,23 @@ class BackgammonGame:
         dice = sorted(self.dice)
 
         if not self.board.checker_at_position(start, player):
+            LOG.error(f'Player had no checker at position {start}')
             return False
         if self.board.has_checkers_on_bar(player) and start != (25 if player == 1 else 0):
+            LOG.error('False')
             return False
         if self.board.point_is_blocked(end, player):
+            LOG.error(f'Point is blocked {end}')
             return False
         if distance not in self.dice and not (self.board.can_bear_off(player) and start - player * distance <= 0):
             if len(dice) != 2 \
                     or dice[0] + dice[1] != distance \
                     or self.board.point_is_blocked(start - player * dice[0], player)\
                     or self.board.point_is_blocked(start - player * dice[1], player):
+                LOG.error('False')
                 return False
         if start - player * distance <= 0 and not self.board.can_bear_off(player):
+            LOG.error('False')
             return False
 
         return True

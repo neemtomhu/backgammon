@@ -3,6 +3,7 @@ import numpy as np
 
 from utils.logger import LOG
 from visuals import BoardVisuals
+from visuals.board_detector import get_closed_image, find_circles
 
 
 def get_checker_movement(img, circles):
@@ -66,3 +67,42 @@ def get_square_centre(x, y, w, h):
     y += h/2
     return x, y
 
+
+def count_checkers_on_field(img, field):
+    checker_diameter = BoardVisuals.BackgammonBoardVisuals.checker_diameter
+    offset = checker_diameter * 0.6
+
+    x1, x2 = sorted([int(field.endpoints[0]), int(field.endpoints[2])])
+    y1, y2 = sorted([int(field.endpoints[1] - offset), int(field.endpoints[3] + offset)])
+    roi = img[y1:y2, x1:x2]
+    # cv2.imshow('Field ROI', roi)
+
+    closed = get_closed_image(roi)
+    # cv2.imshow('Closed roi', closed)
+    checkers = find_circles(closed, checker_diameter / 2)
+    if checkers is not None:
+        # LOG.info(f'Checkers found on field [{field.field_number}]: {len(checkers[0])}')
+        # return len(checkers[0])
+    # if checkers is not None:
+        circles = np.uint16(np.around(checkers))
+        for i in circles[0, :]:
+            cv2.circle(roi, (i[0], i[1]), i[2], (0, 255, 0), 2)
+
+    result = len(checkers[0]) if checkers is not None else 0
+    LOG.info(f'Checkers found on field [{field.field_number}]: {result}')
+
+    if result != field.checkers:
+        cv2.imshow(f'Detected checkers on field {field.field_number}', roi)
+        cv2.waitKey(1)
+    return result
+
+
+def check_for_moved_checkers(img):
+    for i in range(1, 25):
+        LOG.debug(f'Counting checkers on field {i}')
+        field = BoardVisuals.BackgammonBoardVisuals.fields[i]
+        current_count = count_checkers_on_field(img, BoardVisuals.BackgammonBoardVisuals.fields[i])
+        if current_count < field.checkers:
+            LOG.info(f'Checker moved from field {i}')
+        elif current_count < field.checkers:
+            LOG.info(f'Checker moved to field {i}')

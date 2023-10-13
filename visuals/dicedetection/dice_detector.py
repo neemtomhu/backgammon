@@ -1,4 +1,3 @@
-import logging
 import math
 
 import cv2
@@ -71,19 +70,22 @@ def detect_dice_value(img, circles):
             detector = cv2.SimpleBlobDetector_create(params)
 
             # Detect black blobs on the dice
-            keypoints = detector.detect(roi)
+            blobs_1 = detector.detect(roi)
 
-            if keypoints:
-                LOG.info(f'Blob size: {math.pi * (keypoints[0].size / 2.0)**2}')
-                dice_values.append(len(keypoints))
-            else:
+            if blobs_1:
+                LOG.info(f'Blob size: {math.pi * (blobs_1[0].size / 2.0)**2}')
+                # dice_values.append(len(blobs_1))
+            # else:
                 # Detect white blobs on the dice
-                params.blobColor = 255
-                detector = cv2.SimpleBlobDetector_create(params)
-                keypoints = detector.detect(roi)
-                dice_values.append(len(keypoints))
+            params.blobColor = 255
+            detector = cv2.SimpleBlobDetector_create(params)
+            blobs_2 = detector.detect(roi)
 
-            LOG.info(f'Dice value detected: {len(keypoints)}')
+            keypoints = blobs_1 if len(blobs_1) > len(blobs_2) else blobs_2
+
+            dice_values.append(len(keypoints))
+
+            LOG.info(f'Dice value detected: {len(blobs_1)}')
 
             # Draw detected blobs on the image
             # Adjust keypoint positions and draw them on the original image

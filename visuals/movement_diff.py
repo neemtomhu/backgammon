@@ -67,7 +67,7 @@ def get_anchor_frame(cap, start_pos=1, time_limit_secs=10):
 
 
 def get_next_move_frame(cap, anchor_frame_pos, calm_duration_secs=1.5):
-    LOG.debug('Detecting movement frame after anchor frame')
+    LOG.debug('Detecting movement frame')
     lower_threshold = ((BoardVisuals.BackgammonBoardVisuals.checker_diameter / 2) ** 2 * math.pi) * 1
     upper_threshold = ((BoardVisuals.BackgammonBoardVisuals.checker_diameter / 2) ** 2 * math.pi) * 3
 
@@ -129,6 +129,7 @@ def get_next_move_frame(cap, anchor_frame_pos, calm_duration_secs=1.5):
             f'Frame count: {frame_count}\n lower_threshold={lower_threshold}, upper_threshold={upper_threshold}, valid_area={valid_area}')
 
     LOG.debug(f'Detected movement frame position: {stable_frame_pos}')
+
     return stable_frame_pos
 
 
@@ -241,7 +242,7 @@ def detect_movement_type(img):
         LOG.info('Dice roll detected')
         dice_values = detect_dice_value(detected_img, circles)
         # return "Dice roll"
-    LOG.info(f'dice_values: {dice_values}, moved_from: {moved_from}, moved_to: {moved_to}')
+    LOG.debug(f'dice_values: {dice_values}, moved_from: {moved_from}, moved_to: {moved_to}')
     return dice_values, moved_from, moved_to
 
 

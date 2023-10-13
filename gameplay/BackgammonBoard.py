@@ -5,8 +5,8 @@ class BackgammonBoard:
     def __init__(self):
         self.board = [
             0,  # Bar position for non-white player
-            -2, 0, 0, 0, 0, 5, 0, 3, 0, 0, 0, -5,  # Positions 1-12
-            5, 0, 0, 0, -3, 0, -5, 0, 0, 0, 0, 2,  # Positions 13-24
+            2, 0, 0, 0, 0, -5, 0, -3, 0, 0, 0, 5,  # Positions 1-12
+            -5, 0, 0, 0, 3, 0, 5, 0, 0, 0, 0, -2,  # Positions 13-24
             0  # Bar position for white player
         ]
 

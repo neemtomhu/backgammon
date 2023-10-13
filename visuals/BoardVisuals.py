@@ -16,6 +16,7 @@ class BackgammonBoardVisuals(Observable):
 
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
+            LOG.debug('Initializing board visuals')
             cls._instance = super(BackgammonBoardVisuals, cls).__new__(cls)
         return cls._instance
 
@@ -59,26 +60,26 @@ class BackgammonBoardVisuals(Observable):
         # Calculate field 1 and 24
         field_1_x1, field_1_y1, field_1_x2, field_1_y2, field_24_x1, field_24_y1, field_24_x2, field_24_y2 = \
             self.get_field_endpoints_from_group(ordered_paired_groups[0])
-        self.fields[1] = Field([field_1_x1, field_1_y1, field_1_x2, field_1_y2], 1, ordered_paired_groups[0][0])
-        self.fields[24] = Field([field_24_x1, field_24_y1, field_24_x2, field_24_y2], 24, ordered_paired_groups[0][1])
+        self.fields[1] = Field([field_1_x1, field_1_y1, field_1_x2, field_1_y2], 1, len(ordered_paired_groups[0][0]))
+        self.fields[24] = Field([field_24_x1, field_24_y1, field_24_x2, field_24_y2], 24, len(ordered_paired_groups[0][1]))
 
         # Calculate field 6 and 19
         field_6_x1, field_6_y1, field_6_x2, field_6_y2, field_19_x1, field_19_y1, field_19_x2, field_19_y2 = \
             self.get_field_endpoints_from_group(ordered_paired_groups[1])
-        self.fields[6] = Field([field_6_x1, field_6_y1, field_6_x2, field_6_y2], 5, 6)
-        self.fields[19] = Field([field_19_x1, field_19_y1, field_19_x2, field_19_y2], 5, 19)
+        self.fields[6] = Field([field_6_x1, field_6_y1, field_6_x2, field_6_y2], 6, 5)
+        self.fields[19] = Field([field_19_x1, field_19_y1, field_19_x2, field_19_y2], 19, 5)
 
         # Calculate field 8 and 17
         field_8_x1, field_8_y1, field_8_x2, field_8_y2, field_17_x1, field_17_y1, field_17_x2, field_17_y2 = \
             self.get_field_endpoints_from_group(ordered_paired_groups[2])
-        self.fields[8] = Field([field_8_x1, field_8_y1, field_8_x2, field_8_y2], 3, 8)
-        self.fields[17] = Field([field_17_x1, field_17_y1, field_17_x2, field_17_y2], 3, 17)
+        self.fields[8] = Field([field_8_x1, field_8_y1, field_8_x2, field_8_y2], 8, 3)
+        self.fields[17] = Field([field_17_x1, field_17_y1, field_17_x2, field_17_y2], 17, 3)
 
         # Calculate field 12 and 13
         field_12_x1, field_12_y1, field_12_x2, field_12_y2, field_13_x1, field_13_y1, field_13_x2, field_13_y2 = \
             self.get_field_endpoints_from_group(ordered_paired_groups[3])
-        self.fields[12] = Field([field_12_x1, field_12_y1, field_12_x2, field_12_y2], 5, 12)
-        self.fields[13] = Field([field_13_x1, field_13_y1, field_13_x2, field_13_y2], 5, 12)
+        self.fields[12] = Field([field_12_x1, field_12_y1, field_12_x2, field_12_y2], 12, 5)
+        self.fields[13] = Field([field_13_x1, field_13_y1, field_13_x2, field_13_y2], 13, 5)
 
         # Calculate remaining fields
         ranges_and_params = [
@@ -91,9 +92,9 @@ class BackgammonBoardVisuals(Observable):
         for r, start, end, distance, offset in ranges_and_params:
             for i in r:
                 if not (i == 8 or i == 17):
-                    LOG.info(f'Calculating field: {i}')
+                    LOG.debug(f'Calculating field: {i}')
                     self.fields[i] = self.calculate_field(start, end, distance, i, offset)
-                    LOG.info(f'Field[{i}]: {self.fields[i].endpoints}')
+                    LOG.debug(f'Field[{i}]: {self.fields[i].endpoints}')
 
     def get_field_endpoints_from_group(self, checker_group_pair):
         group1 = checker_group_pair[0]
@@ -124,7 +125,7 @@ class Field:
     def __init__(self, endpoints, field_number, checkers):
         self.endpoints = [int(endpoint) for endpoint in endpoints]  # tuple representing the center line of the field
         self.field_number = field_number  # integer between 1 and 24
-        self.checkers = checkers  # list of Checker objects
+        self.checkers = checkers
 
 
 class Checker:  # TODO this may be removed

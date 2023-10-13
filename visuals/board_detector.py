@@ -182,9 +182,7 @@ def detect_backgammon_board(input_img):
     LOG.info('Detecting board')
 
     input_img = rotate_if_needed(input_img)
-    gray = convert_to_gray(input_img)
-    contrast_enhanced = apply_clahe(gray)
-    closed = preprocess_image(contrast_enhanced)
+    closed = get_closed_image(input_img)
     predicted_radius = predict_checker_diameter(closed)
     circles = find_circles(closed, predicted_radius)
     radii = [circle[2] for circle in circles[0]]
@@ -260,3 +258,9 @@ def find_circles(closed, predicted_radius):
                             param2=24,
                             minRadius=min_radius,
                             maxRadius=max_radius)
+
+
+def get_closed_image(input_img):
+    gray = convert_to_gray(input_img)
+    contrast_enhanced = apply_clahe(gray)
+    return preprocess_image(contrast_enhanced)

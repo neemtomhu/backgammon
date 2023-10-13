@@ -6,7 +6,9 @@ from tkinter import filedialog
 
 from gameplay.BackgammonGame import BackgammonGame
 from utils.logger import LOG, init_logging
+from visuals import BoardVisuals
 from visuals.board_detector import detect_backgammon_board
+from visuals.checker_detector import count_checkers_on_field, check_for_moved_checkers
 from visuals.dicedetection.dice_detector import detect_dice_value, detect_dice_sized_diff
 from visuals.movement_diff import highlight_diff, get_anchor_frame, get_next_move_frame, extract_difference, \
     detect_movement_type
@@ -42,7 +44,7 @@ def main():
     detected_img = detect_backgammon_board(image)
 
     # cv2.imshow('Detected board', detected_img)
-    cv2.waitKey(1)
+    # cv2.waitKey(1)
 
     next_movement_frame_pos = get_next_move_frame(cap, starting_frame_pos)
     cap.set(cv2.CAP_PROP_POS_FRAMES, next_movement_frame_pos)
@@ -73,6 +75,8 @@ def main():
             break
         cv2.imshow('Next movement', next_image)
         cv2.waitKey(1)
+        check_for_moved_checkers(next_image)
+
         diff_img = extract_difference(image, next_image)
 
         dice_values, m_from, m_to = detect_movement_type(diff_img)
@@ -93,8 +97,9 @@ def main():
 
             dice_roll = dice_values.sort()
             BackgammonGame.get_instance().dice = dice_roll
+            BackgammonGame.get_instance().switch_turn()
 
-        LOG.info(f'dice_roll={dice_roll}, moved_from={moved_from}, moved_to={moved_to}')
+        # LOG.info(f'dice_roll={dice_roll}, moved_from={moved_from}, moved_to={moved_to}')
 
         res = cv2.waitKey(1)
         if res & 0xFF == ord('q'):
