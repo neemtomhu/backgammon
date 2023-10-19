@@ -11,6 +11,7 @@ class BackgammonBoard:
         ]
 
     def has_checkers_on_bar(self, player):
+        LOG.debug(f'Player has checkers on bar: {self.board[0 if player == 1 else 25] > 0}')
         return self.board[0 if player == 1 else 25] > 0
 
     def point_is_blocked(self, point, player):

@@ -22,6 +22,9 @@ class BackgammonGame:
         if dice[0] == dice[1]:  # doubles
             self.dice *= 2  # can be played four times
 
+    def get_dice(self):
+        return self.dice
+
     def make_move(self, start, end):
         LOG.info(f'Attempting move: dice={self.dice}, start={start}, end={end}')
         distance = abs(start - end)
@@ -32,8 +35,16 @@ class BackgammonGame:
             return False
 
         self.board.move_checker(start, end, player)
+
+        if distance in self.dice:
+            self.dice.remove(distance)
+        elif distance == sum(self.dice):
+            self.dice =[]
+        else:
+            # Handle the case when double was rolled
+            for _ in range(int(distance / self.dice[0])):
+                self.dice.remove(self.dice[0])
         LOG.info(f'Dice values: {self.dice}')
-        self.dice.remove(distance)
 
         if not self.dice:
             self.switch_turn()
@@ -41,6 +52,7 @@ class BackgammonGame:
         return True
 
     def switch_turn(self):
+        LOG.info(f'Switching turn')
         self.turn *= -1  # switch player
 
     def is_move_valid(self, start, end):
@@ -57,13 +69,13 @@ class BackgammonGame:
         if self.board.point_is_blocked(end, player):
             LOG.error(f'Point is blocked {end}')
             return False
-        if distance not in self.dice and not (self.board.can_bear_off(player) and start - player * distance <= 0):
-            if len(dice) != 2 \
-                    or dice[0] + dice[1] != distance \
-                    or self.board.point_is_blocked(start - player * dice[0], player)\
-                    or self.board.point_is_blocked(start - player * dice[1], player):
-                LOG.error('False')
-                return False
+        # if distance not in self.dice and not (self.board.can_bear_off(player) and start - player * distance <= 0):
+        #     if len(dice) != 2 \
+        #             or dice[0] + dice[1] != distance \
+        #             or self.board.point_is_blocked(start - player * dice[0], player)\
+        #             or self.board.point_is_blocked(start - player * dice[1], player):
+        #         LOG.error('False')
+        #         return False
         if start - player * distance <= 0 and not self.board.can_bear_off(player):
             LOG.error('False')
             return False

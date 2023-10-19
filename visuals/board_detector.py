@@ -248,14 +248,14 @@ def predict_checker_diameter(closed):
     return np.median(radii)
 
 
-def find_circles(closed, predicted_radius):
+def find_circles(closed, predicted_radius, param1=25, param2=24):
     min_dist = int(predicted_radius * 1.8)
     min_radius = int(predicted_radius * 0.76)
     max_radius = int(predicted_radius * 1.25)
     return cv2.HoughCircles(closed, cv2.HOUGH_GRADIENT, dp=1,
                             minDist=min_dist,
-                            param1=25,
-                            param2=24,
+                            param1=param1,
+                            param2=param2,
                             minRadius=min_radius,
                             maxRadius=max_radius)
 

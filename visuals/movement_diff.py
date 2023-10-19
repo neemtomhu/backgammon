@@ -66,7 +66,7 @@ def get_anchor_frame(cap, start_pos=1, time_limit_secs=10):
     return anchor_frame_pos
 
 
-def get_next_move_frame(cap, anchor_frame_pos, calm_duration_secs=1.5):
+def get_next_move_frame(cap, anchor_frame_pos, calm_duration_secs=2.5):
     LOG.debug('Detecting movement frame')
     lower_threshold = ((BoardVisuals.BackgammonBoardVisuals.checker_diameter / 2) ** 2 * math.pi) * 1
     upper_threshold = ((BoardVisuals.BackgammonBoardVisuals.checker_diameter / 2) ** 2 * math.pi) * 3
@@ -227,9 +227,9 @@ def detect_movement_type(img):
         max_radius_multiplier=0.65,
         param2=25)
 
-    if circles is not None:
-        LOG.info('Checker movement detected')
-        moved_from, moved_to = get_checker_movement(detected_img, circles)
+    # if circles is not None:
+        # LOG.info('Checker movement detected')
+        # moved_from, moved_to = get_checker_movement(detected_img, circles)
         # return "Checker movement"
 
     # Look fod dice sized changes
@@ -243,7 +243,8 @@ def detect_movement_type(img):
         dice_values = detect_dice_value(detected_img, circles)
         # return "Dice roll"
     LOG.debug(f'dice_values: {dice_values}, moved_from: {moved_from}, moved_to: {moved_to}')
-    return dice_values, moved_from, moved_to
+    # return dice_values, moved_from, moved_to
+    return dice_values
 
 
 def calculate_dice_roll_from_move(removed_from, moved_to):

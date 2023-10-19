@@ -79,7 +79,7 @@ def count_checkers_on_field(img, field):
 
     closed = get_closed_image(roi)
     # cv2.imshow('Closed roi', closed)
-    checkers = find_circles(closed, checker_diameter / 2)
+    checkers = find_circles(closed, checker_diameter / 2, param1=40, param2=24)
     if checkers is not None:
         # LOG.info(f'Checkers found on field [{field.field_number}]: {len(checkers[0])}')
         # return len(checkers[0])
@@ -89,7 +89,7 @@ def count_checkers_on_field(img, field):
             cv2.circle(roi, (i[0], i[1]), i[2], (0, 255, 0), 2)
 
     result = len(checkers[0]) if checkers is not None else 0
-    LOG.info(f'Checkers found on field [{field.field_number}]: {result}')
+    LOG.debug(f'Checkers found on field [{field.field_number}]: {result}')
 
     if result != field.checkers:
         cv2.imshow(f'Detected checkers on field {field.field_number}', roi)
@@ -98,11 +98,17 @@ def count_checkers_on_field(img, field):
 
 
 def check_for_moved_checkers(img):
+    moved_from = []
+    moved_to = []
     for i in range(1, 25):
         LOG.debug(f'Counting checkers on field {i}')
         field = BoardVisuals.BackgammonBoardVisuals.fields[i]
         current_count = count_checkers_on_field(img, BoardVisuals.BackgammonBoardVisuals.fields[i])
         if current_count < field.checkers:
-            LOG.info(f'Checker moved from field {i}')
-        elif current_count < field.checkers:
-            LOG.info(f'Checker moved to field {i}')
+            LOG.info(f'Checker moved from field {i}, previous: {field.checkers}, current: {current_count}')
+            moved_from.extend([i] * abs(field.checkers - current_count))
+        elif current_count > field.checkers:
+            LOG.info(f'Checker moved to field {i}, previous: {field.checkers}, current: {current_count}')
+            moved_to.extend([i] * abs(field.checkers - current_count))
+
+    return moved_from, moved_to

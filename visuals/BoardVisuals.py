@@ -57,6 +57,11 @@ class BackgammonBoardVisuals(Observable):
                                self.corners[1][0],
                                ((self.corners[1][1] + self.corners[3][1]) / 2)], 0, 0)
 
+        # Calculate bar position
+        bar_x = (self.corners[0][0] + self.corners[3][0]) / 2
+        bar_y = (self.corners[0][1] + self.corners[2][1]) / 2
+        self.fields[0] = Field([bar_x, bar_y, bar_x, bar_y], 0, 0)
+
         # Calculate field 1 and 24
         field_1_x1, field_1_y1, field_1_x2, field_1_y2, field_24_x1, field_24_y1, field_24_x2, field_24_y2 = \
             self.get_field_endpoints_from_group(ordered_paired_groups[0])
@@ -86,7 +91,7 @@ class BackgammonBoardVisuals(Observable):
             (range(2, 6), 1, 6, 5, 1),
             (range(7, 12), 8, 12, 4, 8),
             (range(14, 19), 13, 17, 4, 17),
-            (range(19, 24), 19, 24, 5, 19)
+            (range(20, 24), 19, 24, 5, 19)
         ]
 
         for r, start, end, distance, offset in ranges_and_params:
@@ -118,7 +123,9 @@ class BackgammonBoardVisuals(Observable):
         y1 = self.fields[offset].endpoints[1] + (field_number - offset) * y1_distance
         x2 = self.fields[offset].endpoints[2]
         y2 = self.fields[offset].endpoints[3] + (field_number - offset) * y2_distance
-        return Field([x1, y1, x2, y2], field_number, 0)
+        field = Field([x1, y1, x2, y2], field_number, 0)
+        LOG.debug(f'Field [{field.field_number}], checkers={field.checkers}')
+        return field
 
 
 class Field:
