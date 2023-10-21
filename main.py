@@ -107,26 +107,16 @@ def main():
 
             LOG.info(f'Making moves: dice_values={deduced_dice_roll}, moved_from={moved_from}, moved_to={moved_to}')
 
-            # total_movement = abs(sum(moved_from) - sum(moved_to))
-            # if total_movement > sum(dice_roll):
-            #     dice1 = max(dice_roll)
-            #     dice2 = total_movement - dice1
-            #     dice_roll = [dice1, dice2]
-            #     LOG.info(f'Dice roll: {dice_roll}')
-            # elif total_movement < sum(dice_roll):
-            #     LOG.info(f'Dice roll: {dice_roll}')
-            #     continue
-
             BackgammonGame.get_instance().set_dice(deduced_dice_roll)
-            LOG.info(f'Dice roll: {deduced_dice_roll}')
+            # LOG.info(f'Dice roll: {deduced_dice_roll}')
             while moved_from:
                 for f_m in moved_from:
                     for t_m in moved_to:
-                        # LOG.info(f'Dice roll: {deduced_dice_roll}')
+                        LOG.info(f'Dice roll: {deduced_dice_roll}')
                         if BackgammonGame.get_instance().make_move(f_m, t_m):
                             moved_from.remove(f_m)
                             moved_to.remove(t_m)
-                            LOG.info(f'Dice roll: {deduced_dice_roll}')
+                            # LOG.info(f'Dice roll: {deduced_dice_roll}')
 
             for i in range(25):
                 BoardVisuals.BackgammonBoardVisuals.fields[i].checkers = abs(BackgammonGame.get_instance().board.board[i])

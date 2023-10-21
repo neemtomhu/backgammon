@@ -91,16 +91,16 @@ def count_checkers_on_field(img, field):
     result = len(checkers[0]) if checkers is not None else 0
     LOG.debug(f'Checkers found on field [{field.field_number}]: {result}')
 
-    if result != field.checkers:
-        cv2.imshow(f'Detected checkers on field {field.field_number}', roi)
-        cv2.waitKey(1)
+    # if result != field.checkers:
+        # cv2.imshow(f'Detected checkers on field {field.field_number}', roi)
+        # cv2.waitKey(1)
     return result
 
 
 def check_for_moved_checkers(img):
     moved_from = []
     moved_to = []
-    for i in range(1, 25):
+    for i in range(0, 25):
         LOG.debug(f'Counting checkers on field {i}')
         field = BoardVisuals.BackgammonBoardVisuals.fields[i]
         current_count = count_checkers_on_field(img, BoardVisuals.BackgammonBoardVisuals.fields[i])

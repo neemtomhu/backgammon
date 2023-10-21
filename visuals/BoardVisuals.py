@@ -51,16 +51,11 @@ class BackgammonBoardVisuals(Observable):
         BackgammonBoardVisuals.orientation = orientation
 
     def set_starting_fields_from_checker_groups(self, ordered_paired_groups):
-        # Calculate bar position
-        self.fields[0] = Field([self.corners[0][0],
-                               ((self.corners[0][1] + self.corners[2][1]) / 2),
-                               self.corners[1][0],
-                               ((self.corners[1][1] + self.corners[3][1]) / 2)], 0, 0)
 
         # Calculate bar position
         bar_x = (self.corners[0][0] + self.corners[3][0]) / 2
         bar_y = (self.corners[0][1] + self.corners[2][1]) / 2
-        self.fields[0] = Field([bar_x, bar_y, bar_x, bar_y], 0, 0)
+        self.fields[0] = Field([bar_x-100, bar_y, bar_x+100, bar_y], 0, 0)
 
         # Calculate field 1 and 24
         field_1_x1, field_1_y1, field_1_x2, field_1_y2, field_24_x1, field_24_y1, field_24_x2, field_24_y2 = \

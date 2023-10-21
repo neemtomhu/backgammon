@@ -39,7 +39,7 @@ class BackgammonGame:
         if distance in self.dice:
             self.dice.remove(distance)
         elif distance == sum(self.dice):
-            self.dice =[]
+            self.dice = []
         else:
             # Handle the case when double was rolled
             for _ in range(int(distance / self.dice[0])):
@@ -52,8 +52,8 @@ class BackgammonGame:
         return True
 
     def switch_turn(self):
-        LOG.info(f'Switching turn')
         self.turn *= -1  # switch player
+        LOG.info(f'Switching turn to {self.turn}')
 
     def is_move_valid(self, start, end):
         distance = abs(start - end)
@@ -63,8 +63,8 @@ class BackgammonGame:
         if not self.board.checker_at_position(start, player):
             LOG.error(f'Player had no checker at position {start}')
             return False
-        if self.board.has_checkers_on_bar(player) and start != (25 if player == 1 else 0):
-            LOG.error('False')
+        if self.board.has_checkers_on_bar(player) and start != (25 if player == -1 else 0):
+            LOG.error(f'Invalid start, player {player} has checker on bar')
             return False
         if self.board.point_is_blocked(end, player):
             LOG.error(f'Point is blocked {end}')
@@ -76,7 +76,7 @@ class BackgammonGame:
         #             or self.board.point_is_blocked(start - player * dice[1], player):
         #         LOG.error('False')
         #         return False
-        if start - player * distance <= 0 and not self.board.can_bear_off(player):
+        if start + player * distance <= 0 and not self.board.can_bear_off(player):
             LOG.error('False')
             return False
 
