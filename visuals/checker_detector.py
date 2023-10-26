@@ -3,7 +3,7 @@ import numpy as np
 
 from utils.logger import LOG
 from visuals import BoardVisuals
-from visuals.board_detector import get_closed_image, find_circles
+from visuals.board_detector import get_closed_image, find_circles, preprocess_image_for_checker_detection
 
 
 def get_checker_movement(img, circles):
@@ -70,7 +70,7 @@ def get_square_centre(x, y, w, h):
 
 def count_checkers_on_field(img, field):
     checker_diameter = BoardVisuals.BackgammonBoardVisuals.checker_diameter
-    offset = checker_diameter * 0.6
+    offset = checker_diameter * 0.75
 
     x1, x2 = sorted([int(field.endpoints[0]), int(field.endpoints[2])])
     y1, y2 = sorted([int(field.endpoints[1] - offset), int(field.endpoints[3] + offset)])
@@ -78,22 +78,32 @@ def count_checkers_on_field(img, field):
     # cv2.imshow('Field ROI', roi)
 
     closed = get_closed_image(roi)
-    # cv2.imshow('Closed roi', closed)
-    checkers = find_circles(closed, checker_diameter / 2, param1=40, param2=24)
+    # cv2.imshow(f'Closed roi', closed)
+    # cv2.waitKey(1)
+    checkers = find_circles(closed, checker_diameter / 2, param1=200, param2=20)
+    filtered_circles = []
     if checkers is not None:
-        # LOG.info(f'Checkers found on field [{field.field_number}]: {len(checkers[0])}')
-        # return len(checkers[0])
-    # if checkers is not None:
         circles = np.uint16(np.around(checkers))
-        for i in circles[0, :]:
-            cv2.circle(roi, (i[0], i[1]), i[2], (0, 255, 0), 2)
 
-    result = len(checkers[0]) if checkers is not None else 0
+        # Filter circles whose centers are outside the ROI
+        for circle in circles[0, :]:
+            # Convert circle's origin back to original image coordinates
+            circle_x = circle[0] + x1
+            circle_y = circle[1] + y1
+
+            nearest_field_id = BoardVisuals.BackgammonBoardVisuals().get_nearest_field_id(circle_x, circle_y)
+            if nearest_field_id == field.field_number:
+                filtered_circles.append(circle)
+
+        for i in filtered_circles:
+            cv2.circle(closed, (i[0], i[1]), i[2], (0, 255, 0), 2)
+
+    result = len(filtered_circles) if checkers is not None else 0
     LOG.debug(f'Checkers found on field [{field.field_number}]: {result}')
 
-    # if result != field.checkers:
-        # cv2.imshow(f'Detected checkers on field {field.field_number}', roi)
-        # cv2.waitKey(1)
+    if result != field.checkers:
+        cv2.imshow(f'Detected checkers on field {field.field_number}', closed)
+        cv2.waitKey(1)
     return result
 
 

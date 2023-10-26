@@ -6,7 +6,7 @@ import numpy as np
 from utils.logger import LOG
 from visuals import BoardVisuals
 from visuals.BoardVisuals import BackgammonBoardVisuals
-from visuals.checker_detector import get_checker_movement
+# from visuals.checker_detector import get_checker_movement
 from visuals.dicedetection.dice_detector import detect_dice_sized_diff, detect_dice_value
 
 
@@ -66,71 +66,145 @@ def get_anchor_frame(cap, start_pos=1, time_limit_secs=10):
     return anchor_frame_pos
 
 
-def get_next_move_frame(cap, anchor_frame_pos, calm_duration_secs=2.5):
-    LOG.debug('Detecting movement frame')
-    lower_threshold = ((BoardVisuals.BackgammonBoardVisuals.checker_diameter / 2) ** 2 * math.pi) * 1
-    upper_threshold = ((BoardVisuals.BackgammonBoardVisuals.checker_diameter / 2) ** 2 * math.pi) * 3
-
+def get_next_move_frame(cap, anchor_frame_pos, board_roi, area_thresh=1000):
+    # Set the video position to the anchor frame
     cap.set(cv2.CAP_PROP_POS_FRAMES, anchor_frame_pos)
-    ret, anchor_img = cap.read()
+    LOG.debug('Detecting next move frame')
+    ret, anchor_frame = cap.read()
     if not ret:
         return None
-    anchor_img = cv2.cvtColor(anchor_img, cv2.COLOR_BGR2GRAY)
 
-    fps = int(cap.get(cv2.CAP_PROP_FPS))
-    frames_to_check = int(fps * calm_duration_secs)
-    frame_count = 0
+    # Convert anchor frame to grayscale
+    anchor_gray = cv2.cvtColor(anchor_frame, cv2.COLOR_BGR2GRAY)
 
-    stable_frame_pos = None
+    # Create a mask for the region outside the board
+    mask = np.ones_like(anchor_gray) * 255
+    # Rearrange the board_roi points
+    board_roi = [board_roi[0], board_roi[1], board_roi[3], board_roi[2]]
+    pts = np.array(board_roi, np.int32)
+    pts = pts.reshape((-1, 1, 2))
+    cv2.fillPoly(mask, [pts], 0)
+
+    # Apply the mask to the anchor frame
+    anchor_gray_masked = cv2.bitwise_and(anchor_gray, mask)
+
+    hand_in_frame = False
+
     while True:
-        ret, current_img = cap.read()
+        cv2.waitKey(1)
+        # Increment frame position by 10
+        current_pos = cap.get(cv2.CAP_PROP_POS_FRAMES)
+        LOG.debug(f'Processing position: {current_pos}')
+        cap.set(cv2.CAP_PROP_POS_FRAMES, current_pos + 20)
+
+        ret, frame = cap.read()
         if not ret:
             break
 
-        current_img = cv2.cvtColor(current_img, cv2.COLOR_BGR2GRAY)
+        # Convert current frame to grayscale
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-        difference = cv2.absdiff(anchor_img, current_img)
-        _, binary_diff = cv2.threshold(difference, 25, 255, cv2.THRESH_BINARY)  # Adjust threshold as needed
+        # Apply the mask to the current frame
+        gray_masked = cv2.bitwise_and(gray, mask)
 
-        contours, _ = cv2.findContours(binary_diff, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        valid_area = sum(cv2.contourArea(contour) for contour in contours if
-                         lower_threshold <= cv2.contourArea(contour) <= upper_threshold)
+        # Calculate absolute difference between current frame and anchor frame
+        diff = cv2.absdiff(gray_masked, anchor_gray_masked)
 
-        if valid_area > 0:
+        # Threshold the difference image
+        _, thresh = cv2.threshold(diff, 25, 255, cv2.THRESH_BINARY)
 
-            is_calm = True
-            for _ in range(frames_to_check):
-                ret, next_img = cap.read()
-                frame_count += 1
-                if not ret:
-                    is_calm = False
-                    break
-                next_img = cv2.cvtColor(next_img, cv2.COLOR_BGR2GRAY)
-                next_diff = cv2.absdiff(current_img, next_img)
-                _, binary_next_diff = cv2.threshold(next_diff, 25, 255, cv2.THRESH_BINARY)  # Adjust threshold as needed
+        # Find contours
+        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-                next_contours, _ = cv2.findContours(binary_next_diff, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-                next_valid_area = sum(cv2.contourArea(contour) for contour in next_contours if
-                                      lower_threshold <= cv2.contourArea(contour) <= upper_threshold)
+        # Check if any contour is large enough to be the hand
+        areas = []
+        for contour in contours:
+            area = cv2.contourArea(contour)
+            areas.append(area)
+            cv2.drawContours(frame, [contour], -1, (0, 255, 0), 2)
+            if area > area_thresh:
+                LOG.debug(f'Hand movement area: {area}')
+                hand_in_frame = True
+                # break
 
-                LOG.debug(f'next_valid_area={next_valid_area}')
-                if next_valid_area > upper_threshold:
-                    is_calm = False
-                    break
+        # LOG.info(f'Max area: {max(areas)}')
 
-            if is_calm:
-                stable_frame_pos = anchor_frame_pos + frame_count
-                cv2.drawContours(current_img, next_contours, -1, (0, 255, 0), 2)
-                # cv2.imshow('Detected Differences', current_img)
-                break
+        if hand_in_frame and not any(cv2.contourArea(contour) > area_thresh for contour in contours):
+            # Hand was in the frame in the previous iteration but not now
+            cv2.imshow('Next move', frame)
+            cv2.waitKey(1)
+            if areas:
+                LOG.info(f'Max contour area: {max(areas)}')
+            return int(cap.get(cv2.CAP_PROP_POS_FRAMES))
 
-        frame_count += 1
-        LOG.debug(
-            f'Frame count: {frame_count}\n lower_threshold={lower_threshold}, upper_threshold={upper_threshold}, valid_area={valid_area}')
+    return None
 
-    LOG.debug(f'Detected movement frame position: {stable_frame_pos}')
 
-    return stable_frame_pos
+# def get_next_move_frame(cap, anchor_frame_pos, calm_duration_secs=2.5):
+#     LOG.debug('Detecting movement frame')
+#     lower_threshold = ((BoardVisuals.BackgammonBoardVisuals.checker_diameter / 2) ** 2 * math.pi) * 1
+#     upper_threshold = ((BoardVisuals.BackgammonBoardVisuals.checker_diameter / 2) ** 2 * math.pi) * 2
+#
+#     cap.set(cv2.CAP_PROP_POS_FRAMES, anchor_frame_pos)
+#     ret, anchor_img = cap.read()
+#     if not ret:
+#         return None
+#     anchor_img = cv2.cvtColor(anchor_img, cv2.COLOR_BGR2GRAY)
+#
+#     fps = int(cap.get(cv2.CAP_PROP_FPS))
+#     frames_to_check = int(fps * calm_duration_secs)
+#     frame_count = 0
+#
+#     stable_frame_pos = None
+#     while True:
+#         ret, current_img = cap.read()
+#         if not ret:
+#             break
+#
+#         current_img = cv2.cvtColor(current_img, cv2.COLOR_BGR2GRAY)
+#
+#         difference = cv2.absdiff(anchor_img, current_img)
+#         _, binary_diff = cv2.threshold(difference, 25, 255, cv2.THRESH_BINARY)  # Adjust threshold as needed
+#
+#         contours, _ = cv2.findContours(binary_diff, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+#         valid_area = sum(cv2.contourArea(contour) for contour in contours if
+#                          lower_threshold <= cv2.contourArea(contour) <= upper_threshold)
+#
+#         if valid_area > 0:
+#
+#             is_calm = True
+#             for _ in range(frames_to_check):
+#                 ret, next_img = cap.read()
+#                 frame_count += 1
+#                 if not ret:
+#                     is_calm = False
+#                     break
+#                 next_img = cv2.cvtColor(next_img, cv2.COLOR_BGR2GRAY)
+#                 next_diff = cv2.absdiff(current_img, next_img)
+#                 _, binary_next_diff = cv2.threshold(next_diff, 25, 255, cv2.THRESH_BINARY)  # Adjust threshold as needed
+#
+#                 next_contours, _ = cv2.findContours(binary_next_diff, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+#                 next_valid_area = sum(cv2.contourArea(contour) for contour in next_contours if
+#                                       lower_threshold <= cv2.contourArea(contour) <= upper_threshold)
+#
+#                 LOG.debug(f'next_valid_area={next_valid_area}')
+#                 if next_valid_area > upper_threshold:
+#                     is_calm = False
+#                     break
+#
+#             if is_calm:
+#                 stable_frame_pos = anchor_frame_pos + frame_count
+#                 cv2.drawContours(current_img, next_contours, -1, (0, 255, 0), 2)
+#                 # cv2.imshow('Detected Differences', current_img)
+#                 break
+#
+#         frame_count += 1
+#         LOG.debug(
+#             f'Frame count: {frame_count}\n lower_threshold={lower_threshold}, upper_threshold={upper_threshold}, valid_area={valid_area}')
+#
+#     LOG.debug(f'Detected movement frame position: {stable_frame_pos}')
+#
+#     return stable_frame_pos
 
 
 def highlight_diff(image1, image2):
@@ -235,7 +309,7 @@ def detect_movement_type(img):
     # Look fod dice sized changes
     detected_img, circles = detect_dice_sized_diff(
         img,
-        min_radius_multiplier=0.2,
+        min_radius_multiplier=0.3,
         max_radius_multiplier=0.4,
         param2=17)
     if circles is not None:

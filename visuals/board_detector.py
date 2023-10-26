@@ -226,6 +226,28 @@ def rotate_if_needed(input_img):
     return input_img
 
 
+def predict_checker_diameter(closed):
+    circles = cv2.HoughCircles(closed, cv2.HOUGH_GRADIENT, dp=1, minDist=20, param1=25, param2=35, minRadius=12,
+                               maxRadius=29)
+    radii = [circle[2] for circle in circles[0]]
+    return np.median(radii)
+
+
+def find_circles(img, predicted_radius, param1=25, param2=24):
+    min_dist = int(predicted_radius * 1.8)
+    min_radius = int(predicted_radius * 0.76)
+    max_radius = int(predicted_radius * 1.25)
+    # edges = cv2.Canny(img, 50, 150)
+    # cv2.imshow('Edges', edges)
+    # cv2.waitKey(1)
+    return cv2.HoughCircles(img, cv2.HOUGH_GRADIENT, dp=1,
+                            minDist=min_dist,
+                            param1=param1,
+                            param2=param2,
+                            minRadius=min_radius,
+                            maxRadius=max_radius)
+
+
 def convert_to_gray(input_img):
     return cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
 
@@ -241,23 +263,21 @@ def preprocess_image(contrast_enhanced):
     return cv2.morphologyEx(blurred, cv2.MORPH_CLOSE, kernel)
 
 
-def predict_checker_diameter(closed):
-    circles = cv2.HoughCircles(closed, cv2.HOUGH_GRADIENT, dp=1, minDist=20, param1=25, param2=35, minRadius=12,
-                               maxRadius=29)
-    radii = [circle[2] for circle in circles[0]]
-    return np.median(radii)
+def preprocess_image_for_checker_detection(input_img):
+    gray = cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
 
+    # Apply morphological opening
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+    opening = cv2.morphologyEx(blurred, cv2.MORPH_OPEN, kernel)
 
-def find_circles(closed, predicted_radius, param1=25, param2=24):
-    min_dist = int(predicted_radius * 1.8)
-    min_radius = int(predicted_radius * 0.76)
-    max_radius = int(predicted_radius * 1.25)
-    return cv2.HoughCircles(closed, cv2.HOUGH_GRADIENT, dp=1,
-                            minDist=min_dist,
-                            param1=param1,
-                            param2=param2,
-                            minRadius=min_radius,
-                            maxRadius=max_radius)
+    # Apply dilation
+    dilated = cv2.dilate(opening, kernel, iterations=1)
+
+    # Apply adaptive thresholding
+    thresh = cv2.adaptiveThreshold(dilated, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2)
+    edges = cv2.Canny(thresh, 100, 200)
+    return edges
 
 
 def get_closed_image(input_img):

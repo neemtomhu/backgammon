@@ -51,7 +51,7 @@ def detect_dice_value(img, circles):
         dice_values = []
 
         for (x, y, r) in circles:
-            r += 10  # expand the circle to ensure all blobs are properly visible
+            r += 15  # expand the circle to ensure all blobs are properly visible
             # Draw the circle in the output image
             cv2.circle(img, (x, y), r, (0, 255, 0), 1)
             LOG.debug(f"Dice radius: {r}")
@@ -98,16 +98,3 @@ def detect_dice_value(img, circles):
         return dice_values
 
     return []
-
-'''
-* Not detected -> 0
-    * Have both moves
-        * Get possible dice rolls, remove invalid moves, return a tuple of the possible combinations
-    * Have only 1 move
-        * If no more moves comes, the dice roll have to add up to the distance moved
-        * If more moves come, the dice roll is the 2 distances covered
-* Incorrectly detected
-    * check is any of the moved distances match any of the detected dice values
-    * the other one is the other distance covered
-    * in case only one dice is moved to cover the value of both dice, get the possible dice values as the combination of the need to add up to the distance covered, we can then remove not possible rolls, for example the checker moved 6 positions, but there are opponents checkers on the 2nd and 3rd field
-'''
