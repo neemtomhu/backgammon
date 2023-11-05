@@ -1,3 +1,5 @@
+import itertools
+
 from gameplay.BackgammonBoard import BackgammonBoard
 from utils.logger import LOG
 
@@ -30,6 +32,16 @@ class BackgammonGame:
         distance = abs(start - end)
         player = self.turn
 
+        if player == 1 and start > end:
+            LOG.info('Player not allowed to move backwards')
+            return False
+        if player == -1 and start < end:
+            LOG.info('Player not allowed to move backwards')
+            return False
+        if end != 0 and distance not in self.dice and all(sum(comb) != distance for r in range(1, len(self.dice) + 1) for comb in itertools.combinations(self.dice, r)):
+            LOG.info('Invalid move, distance can not be covered by dice values')
+            return False
+
         if not self.is_move_valid(start, end):
             LOG.info(f'Invalid move {start} -> {end}')
             return False
@@ -40,6 +52,8 @@ class BackgammonGame:
             self.dice.remove(distance)
         elif distance == sum(self.dice):
             self.dice = []
+        elif all(distance < x for x in self.dice):
+            self.dice.remove(min(self.dice))
         else:
             # Handle the case when double was rolled
             for _ in range(int(distance / self.dice[0])):

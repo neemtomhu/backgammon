@@ -5,12 +5,12 @@ import tkinter as tk
 from tkinter import filedialog
 
 from gameplay.BackgammonGame import BackgammonGame
-from utils.dice_value_utils import deduce_dice
+from utils.dice_value_utils import deduce_dice, can_bear_off
 from utils.logger import LOG, init_logging
 from visuals import BoardVisuals
 from visuals.BoardVisuals import BackgammonBoardVisuals
 from visuals.board_detector import detect_backgammon_board
-from visuals.checker_detector import count_checkers_on_field, check_for_moved_checkers
+from visuals.checker_detector import count_checkers_on_field, check_for_moved_checkers, bearing_off
 from visuals.dicedetection.dice_detector import detect_dice_value, detect_dice_sized_diff
 from visuals.movement_diff import highlight_diff, get_anchor_frame, get_next_move_frame, extract_difference, \
     detect_movement_type
@@ -53,14 +53,24 @@ def main():
     anchor_img_pos = starting_frame_pos
     LOG.info(f'anchor_img_pos={anchor_img_pos}')
 
+    frames_to_skip = 19
+    area_thresh = 1000
+    board_state = BackgammonGame.get_instance().board.board
+
     dice_roll = []
     moved_from = []
     moved_to = []
     # turn = BackgammonGame.get_instance().turn
 
     while True:
+        if bearing_off(board_state):
+            if sum(abs(x) for x in board_state) < 16:
+                frames_to_skip = 2
+                area_thresh = 20000
+            else:
+                frames_to_skip = 4
         cap.set(cv2.CAP_PROP_POS_FRAMES, anchor_img_pos)
-        LOG.info(f'anchor_img_pos={get_time_from_frame_pos(anchor_img_pos, fps)}')
+        LOG.debug(f'anchor_img_pos={get_time_from_frame_pos(anchor_img_pos, fps)}')
         ret, image = cap.read()
         if not ret:
             break
@@ -69,18 +79,28 @@ def main():
         turn = BackgammonGame.get_instance().turn
         prev_move_pos = anchor_img_pos
         while True:
-            LOG.info(f'prev_move_pos={get_time_from_frame_pos(prev_move_pos, fps)}')
+            LOG.debug(f'prev_move_pos={get_time_from_frame_pos(prev_move_pos, fps)}')
 
             if not moved_from:
                 LOG.info(f'Checking for moved checkers')
                 moved_from, moved_to = check_for_moved_checkers(image)
+                # if bearing_off(board_state):
+                #     moved_from = [m for m in moved_from if m * turn > 0]
 
             if moved_from and 0 in moved_to:
+                for m_t in moved_to:
+                    if BackgammonGame.get_instance().board.board[m_t] * turn == -1:
+                        moved_to.append(m_t)
+                        break
+
                 for m_f in moved_from:
-                    if BackgammonGame.get_instance().board.board[m_f] * turn == -1:
+                    if BackgammonGame.get_instance().board.board[m_f] * turn == -1 and m_f not in moved_to:
                         moved_to.append(m_f)
 
-            next_movement_frame_pos = get_next_move_frame(cap, prev_move_pos, board_roi)
+            if bearing_off(board_state):
+                moved_from = [m for m in moved_from if board_state[m] * turn > 0]
+
+            next_movement_frame_pos = get_next_move_frame(cap, prev_move_pos, board_roi, area_thresh=area_thresh, frames_to_skip=frames_to_skip)
             LOG.info(f'next_movement_frame_pos={get_time_from_frame_pos(next_movement_frame_pos, fps)}')
             # cap.set(cv2.CAP_PROP_POS_FRAMES, next_movement_frame_pos)
             ret, next_image = cap.read()
@@ -91,34 +111,38 @@ def main():
 
             diff_img = extract_difference(image, next_image)
 
-            # dice_values, m_from, m_to = detect_movement_type(diff_img)
+            # dice_values, m_from, next_moved_to = detect_movement_type(diff_img)
             dice_values = detect_movement_type(diff_img)
             if dice_values and not dice_roll:
                 dice_roll = dice_values
                 LOG.info(f'Setting initial dice roll: {dice_roll}')
                 # BackgammonGame.get_instance().dice = dice_roll
-            m_from, m_to = check_for_moved_checkers(next_image)
+            next_moved_from, next_moved_to = check_for_moved_checkers(next_image)
 
-            if not m_from:
+            # for pos in moved_from:
+            #     if pos not in next_moved_from:
+            #         moved_from.remove(pos)
+
+            if not next_moved_from:
                 prev_move_pos = next_movement_frame_pos
                 continue
 
-            if m_from == moved_from and m_to == moved_to:
+            if next_moved_from == moved_from and next_moved_to == moved_to:
                 prev_move_pos = next_movement_frame_pos
                 continue
 
             if not moved_from:
                 prev_move_pos = next_movement_frame_pos
-                moved_from = m_from
-                moved_to = m_to
+                moved_from = next_moved_from
+                moved_to = next_moved_to
                 continue
 
-            if 0 in moved_to and 0 not in m_to:
+            if 0 in moved_to and 0 not in next_moved_to:
                 LOG.info(f'Opponents move detected from bar, braking')
                 break
 
-            new_move_from = [i for i in m_from if i not in moved_from]
-            new_moved_to = [i for i in m_to if i not in moved_to]
+            new_move_from = [i for i in next_moved_from if i not in moved_from]
+            new_moved_to = [i for i in next_moved_to if i not in moved_to]
             if new_move_from and 0 in new_moved_to:
                 for m_f in moved_from:
                     if BackgammonGame.get_instance().board.board[m_f] * turn == -1:
@@ -148,8 +172,8 @@ def main():
             #     break
 
             prev_move_pos = next_movement_frame_pos
-            moved_from = m_from
-            moved_to = m_to
+            moved_from = next_moved_from
+            moved_to = next_moved_to
 
         LOG.info(f'Detected dice roll: {dice_roll}, moved_from={moved_from}, moved_to={moved_to}')
 
@@ -187,6 +211,7 @@ def main():
 
         for i in range(25):
             BoardVisuals.BackgammonBoardVisuals.fields[i].checkers = abs(BackgammonGame.get_instance().board.board[i])
+        BoardVisuals.BackgammonBoardVisuals.fields[0].checkers += abs(BackgammonGame.get_instance().board.board[25])
 
         if deduced_dice_roll:
             anchor_img_pos = next_movement_frame_pos

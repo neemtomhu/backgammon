@@ -80,7 +80,7 @@ def count_checkers_on_field(img, field):
     closed = get_closed_image(roi)
     # cv2.imshow(f'Closed roi', closed)
     # cv2.waitKey(1)
-    checkers = find_circles(closed, checker_diameter / 2, param1=200, param2=20)
+    checkers = find_circles(closed, checker_diameter / 2, param1=200, param2=18)
     filtered_circles = []
     if checkers is not None:
         circles = np.uint16(np.around(checkers))
@@ -92,7 +92,7 @@ def count_checkers_on_field(img, field):
             circle_y = circle[1] + y1
 
             nearest_field_id = BoardVisuals.BackgammonBoardVisuals().get_nearest_field_id(circle_x, circle_y)
-            if nearest_field_id == field.field_number:
+            if nearest_field_id == field.field_number or nearest_field_id == 0:
                 filtered_circles.append(circle)
 
         for i in filtered_circles:
@@ -114,6 +114,7 @@ def check_for_moved_checkers(img):
         LOG.debug(f'Counting checkers on field {i}')
         field = BoardVisuals.BackgammonBoardVisuals.fields[i]
         current_count = count_checkers_on_field(img, BoardVisuals.BackgammonBoardVisuals.fields[i])
+
         if current_count < field.checkers:
             LOG.info(f'Checker moved from field {i}, previous: {field.checkers}, current: {current_count}')
             moved_from.extend([i] * abs(field.checkers - current_count))
@@ -122,3 +123,7 @@ def check_for_moved_checkers(img):
             moved_to.extend([i] * abs(field.checkers - current_count))
 
     return moved_from, moved_to
+
+
+def bearing_off(board_state):
+    return sum(abs(x) for x in board_state) < 30

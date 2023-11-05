@@ -20,8 +20,8 @@ class BackgammonBoard:
     def checker_on_point_can_be_hit(self, point, player):
         return self.board[point] * player == -1
 
-    def can_bear_off(self, player):
-        home_board_points = range(1, 7) if player == 1 else range(19, 25)
+    def can_bear_off(self, player):  # TODO update this
+        home_board_points = range(1, 7) if player == -1 else range(19, 25)
         return all(self.board[i]*player >= 0 for i in home_board_points)
 
     def checker_at_position(self, start, player):
@@ -32,6 +32,7 @@ class BackgammonBoard:
 
     def move_checker(self, start, end, player):
         LOG.info(f'Move {start} -> {end}')
+
         if self.checker_on_point_can_be_hit(end, player):
             self.board[end] = 0
             if player < 1:
@@ -39,5 +40,6 @@ class BackgammonBoard:
             else:
                 self.board[25] += player * -1
         self.board[start] -= player
-        self.board[end] += player
+        if end != 0 and end != 25:
+            self.board[end] += player
         LOG.info(f'Board: {self.board}')

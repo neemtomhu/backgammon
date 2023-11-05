@@ -66,7 +66,7 @@ def get_anchor_frame(cap, start_pos=1, time_limit_secs=10):
     return anchor_frame_pos
 
 
-def get_next_move_frame(cap, anchor_frame_pos, board_roi, area_thresh=1000):
+def get_next_move_frame(cap, anchor_frame_pos, board_roi, area_thresh=1000, frames_to_skip=19):
     # Set the video position to the anchor frame
     cap.set(cv2.CAP_PROP_POS_FRAMES, anchor_frame_pos)
     LOG.debug('Detecting next move frame')
@@ -79,6 +79,25 @@ def get_next_move_frame(cap, anchor_frame_pos, board_roi, area_thresh=1000):
 
     # Create a mask for the region outside the board
     mask = np.ones_like(anchor_gray) * 255
+
+    # Convert board_roi to a list of lists for modification
+    board_roi_list = [list(point) for point in board_roi]
+
+    # Calculate the height of the ROI
+    height = abs(board_roi[2][1] - board_roi[0][1])
+    padding = int(0.1 * height)
+
+    # Add padding to the top-most point
+    board_roi_list[0][1] -= padding
+    board_roi_list[1][1] -= padding
+
+    # Add padding to the bottom-most point
+    board_roi_list[2][1] += padding
+    board_roi_list[3][1] += padding
+
+    # Convert back to a list of tuples
+    board_roi = [tuple(point) for point in board_roi_list]
+
     # Rearrange the board_roi points
     board_roi = [board_roi[0], board_roi[1], board_roi[3], board_roi[2]]
     pts = np.array(board_roi, np.int32)
@@ -92,10 +111,10 @@ def get_next_move_frame(cap, anchor_frame_pos, board_roi, area_thresh=1000):
 
     while True:
         cv2.waitKey(1)
-        # Increment frame position by 10
+        # Increment frame position
         current_pos = cap.get(cv2.CAP_PROP_POS_FRAMES)
         LOG.debug(f'Processing position: {current_pos}')
-        cap.set(cv2.CAP_PROP_POS_FRAMES, current_pos + 20)
+        cap.set(cv2.CAP_PROP_POS_FRAMES, current_pos + frames_to_skip)
 
         ret, frame = cap.read()
         if not ret:
@@ -124,10 +143,12 @@ def get_next_move_frame(cap, anchor_frame_pos, board_roi, area_thresh=1000):
             cv2.drawContours(frame, [contour], -1, (0, 255, 0), 2)
             if area > area_thresh:
                 LOG.debug(f'Hand movement area: {area}')
+                cv2.imshow('Hand in frame', frame)
                 hand_in_frame = True
                 # break
 
-        # LOG.info(f'Max area: {max(areas)}')
+        if areas:
+            LOG.info(f'Max area: {max(areas)}')
 
         if hand_in_frame and not any(cv2.contourArea(contour) > area_thresh for contour in contours):
             # Hand was in the frame in the previous iteration but not now
