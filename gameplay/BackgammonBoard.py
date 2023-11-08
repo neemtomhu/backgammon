@@ -32,6 +32,7 @@ class BackgammonBoard:
 
     def move_checker(self, start, end, player):
         LOG.info(f'Move {start} -> {end}')
+        hit_was_made = False
 
         if self.checker_on_point_can_be_hit(end, player):
             self.board[end] = 0
@@ -39,7 +40,9 @@ class BackgammonBoard:
                 self.board[0] += player * -1
             else:
                 self.board[25] += player * -1
+            hit_was_made = True
         self.board[start] -= player
         if end != 0 and end != 25:
             self.board[end] += player
         LOG.info(f'Board: {self.board}')
+        return hit_was_made

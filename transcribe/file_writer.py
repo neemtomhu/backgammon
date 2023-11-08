@@ -1,10 +1,7 @@
+import logging
 import datetime
 
 filename = None
-
-
-def transcribe(dice_roll, moves):
-    log_message(f"{dice_roll} : {moves}")
 
 
 def log_message(message):

@@ -18,12 +18,12 @@ def possible_dice_values_from_move(moved_from, moved_to):
 
     # Start with all combinations and remove those that are not possible
     # If more than 2 checkers were moved or the distance is greater than 11, it is only possible by doubles, remove all non doubles
-    if len(moved_from) > 2 or sum(distances) > 11 or len(set(distances)) == 1:
+    if len(moved_from) > 2 or sum(distances) > 11 or (len(set(distances)) == 1 and len(distances) > 1 and 0 not in moved_to and 25 not in moved_to):
         all_dice_combinations = {combo for combo in all_dice_combinations if combo[0] == combo[1] and sum(distances) <= combo[0] * 4}
-        return all_dice_combinations
+        return sorted(list(all_dice_combinations), key=sort_dice_combinations_by_value)
 
-    for distance in distances:
-        all_dice_combinations = {combo for combo in all_dice_combinations if sum(combo) >= distance}
+    # for distance in distances:
+    all_dice_combinations = {combo for combo in all_dice_combinations if sum(combo) >= sum(distances)}
 
     # If a double move was made, keep only the combinations that include the double
     if len(set(distances)) == 1 and len(distances) > 1:
@@ -40,10 +40,8 @@ def possible_dice_values_from_move(moved_from, moved_to):
         all_dice_combinations = {combo for combo in all_dice_combinations if
                                  any(d <= distance for d in combo for distance in distances)}
 
-    # TODO: Add any additional specific rules or conditions here
-
     LOG.info(f'Returning possible values: {all_dice_combinations}')
-    return all_dice_combinations
+    return sorted(list(all_dice_combinations), key=sort_dice_combinations_by_value)
 
 
 # def possible_dice_values_from_move(moved_from, moved_to):
@@ -146,6 +144,10 @@ def can_bear_off(board_state, moved_from, turn):
     return in_home and no_outside_checkers
 
 
+def sort_dice_combinations_by_value(dice_pair):
+    return sum(dice_pair) * 2 if dice_pair[0] == dice_pair[1] else sum(dice_pair)
+
+
 def deduce_dice(detected_dice, moved_from, moved_to, board_state, turn):
     LOG.info(
         f'Deducing possible dice values detected_dice={detected_dice}, moved_from={moved_from}, moved_to={moved_to}')
@@ -207,7 +209,7 @@ def deduce_dice(detected_dice, moved_from, moved_to, board_state, turn):
         LOG.info(f'Possible dice values: {possible_values}')
 
         # Convert to a list and sort if necessary
-        sorted_possible_values = sorted(list(possible_values))
+        sorted_possible_values = sorted(list(possible_values), key=sort_dice_combinations_by_value)
 
         for dice_combination in sorted_possible_values:
             if all(is_move_possible(f, t, d, board_state) for f, t, d in zip(moved_from, moved_to, dice_combination)):
@@ -218,7 +220,7 @@ def deduce_dice(detected_dice, moved_from, moved_to, board_state, turn):
     possible_values = possible_dice_values_from_move(moved_from, moved_to)
 
     # Convert to a list and sort if necessary
-    sorted_possible_values = sorted(list(possible_values))
+    sorted_possible_values = sorted(list(possible_values), key=sort_dice_combinations_by_value)
 
     for dice_combination in sorted_possible_values:
         if all(is_move_possible(f, t, d, board_state) for f, t, d in zip(moved_from, moved_to, dice_combination)):

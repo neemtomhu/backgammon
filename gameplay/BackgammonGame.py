@@ -1,6 +1,7 @@
 import itertools
 
 from gameplay.BackgammonBoard import BackgammonBoard
+from transcribe.TranscribeEvent import TranscribeEvent
 from utils.logger import LOG
 
 
@@ -29,6 +30,7 @@ class BackgammonGame:
 
     def make_move(self, start, end):
         LOG.info(f'Attempting move: dice={self.dice}, start={start}, end={end}')
+        move = [start, end]
         distance = abs(start - end)
         player = self.turn
 
@@ -46,7 +48,9 @@ class BackgammonGame:
             LOG.info(f'Invalid move {start} -> {end}')
             return False
 
-        self.board.move_checker(start, end, player)
+        hit_was_made = self.board.move_checker(start, end, player)
+        if hit_was_made:
+            move[1] = f'{move[1]}@'
 
         if distance in self.dice:
             self.dice.remove(distance)
@@ -59,8 +63,10 @@ class BackgammonGame:
             for _ in range(int(distance / self.dice[0])):
                 self.dice.remove(self.dice[0])
         LOG.info(f'Dice values: {self.dice}')
+        TranscribeEvent.get_instance().add_move(move)
 
         if not self.dice:
+            TranscribeEvent.get_instance().log_event()
             self.switch_turn()
 
         return True

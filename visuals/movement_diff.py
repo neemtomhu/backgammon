@@ -114,6 +114,10 @@ def get_next_move_frame(cap, anchor_frame_pos, board_roi, area_thresh=1000, fram
         # Increment frame position
         current_pos = cap.get(cv2.CAP_PROP_POS_FRAMES)
         LOG.debug(f'Processing position: {current_pos}')
+        next_pos = current_pos + frames_to_skip
+        if next_pos > cap.get(cv2.CAP_PROP_FRAME_COUNT):
+            return current_pos
+
         cap.set(cv2.CAP_PROP_POS_FRAMES, current_pos + frames_to_skip)
 
         ret, frame = cap.read()

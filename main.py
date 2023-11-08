@@ -5,6 +5,7 @@ import tkinter as tk
 from tkinter import filedialog
 
 from gameplay.BackgammonGame import BackgammonGame
+from transcribe.TranscribeEvent import TranscribeEvent
 from utils.dice_value_utils import deduce_dice, can_bear_off
 from utils.logger import LOG, init_logging
 from visuals import BoardVisuals
@@ -36,11 +37,9 @@ def main():
     cap = cv2.VideoCapture(file_path)
 
     init_logging(cap)
-    # ret, frame = cap.read()
-
-    skip_frames = 100
 
     starting_frame_pos = get_anchor_frame(cap)
+    total_frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
     cap.set(cv2.CAP_PROP_POS_FRAMES, starting_frame_pos)
     ret, image = cap.read()
     fps = cap.get(cv2.CAP_PROP_FPS)
@@ -101,6 +100,7 @@ def main():
                 moved_from = [m for m in moved_from if board_state[m] * turn > 0]
 
             next_movement_frame_pos = get_next_move_frame(cap, prev_move_pos, board_roi, area_thresh=area_thresh, frames_to_skip=frames_to_skip)
+
             LOG.info(f'next_movement_frame_pos={get_time_from_frame_pos(next_movement_frame_pos, fps)}')
             # cap.set(cv2.CAP_PROP_POS_FRAMES, next_movement_frame_pos)
             ret, next_image = cap.read()
@@ -199,6 +199,7 @@ def main():
         LOG.info(f'Making moves: dice_values={deduced_dice_roll}, moved_from={moved_from}, moved_to={moved_to}')
 
         BackgammonGame.get_instance().set_dice(deduced_dice_roll)
+        TranscribeEvent.get_instance().set_dice_roll(deduced_dice_roll)
         # LOG.info(f'Dice roll: {deduced_dice_roll}')
         while moved_from:
             for f_m in moved_from:
@@ -212,6 +213,17 @@ def main():
         for i in range(25):
             BoardVisuals.BackgammonBoardVisuals.fields[i].checkers = abs(BackgammonGame.get_instance().board.board[i])
         BoardVisuals.BackgammonBoardVisuals.fields[0].checkers += abs(BackgammonGame.get_instance().board.board[25])
+
+        if all(x <= 0 for x in BackgammonGame.get_instance().board.board):
+            LOG.info('Game finished, player 1 wins')
+            cv2.destroyAllWindows()
+            cap.release()
+            break
+        elif all(x >= 0 for x in BackgammonGame.get_instance().board.board):
+            LOG.info('Game finished, player -1 wins')
+            cv2.destroyAllWindows()
+            cap.release()
+            break
 
         if deduced_dice_roll:
             anchor_img_pos = next_movement_frame_pos
