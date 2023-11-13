@@ -56,7 +56,7 @@ def serve_video(token):
 
 
 def get_moves_data():
-    with open('C:\\Users\\Gergely_Bodi\\PycharmProjects\\backgammon\\result\\moves_data.json', 'r') as file:
+    with open('.\\result\\moves_data.json', 'r') as file:
         data = json.load(file)
     return data
 # def start_server():
