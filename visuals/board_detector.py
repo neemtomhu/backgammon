@@ -215,6 +215,7 @@ def detect_backgammon_board(input_img):
     detected_img = draw_group_axes(detected_board_image, ordered_paired_groups)
     LOG.info('Board detected')
     # cv2.imshow('Detected board', detected_img)
+    # cv2.waitKey(1)
 
     return detected_img
 

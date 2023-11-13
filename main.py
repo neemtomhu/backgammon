@@ -1,11 +1,19 @@
 import time
+import uuid
+import webbrowser
+import utils.globals as globals
+from threading import Thread
+from urllib.parse import quote
 
 import cv2
 import tkinter as tk
 from tkinter import filedialog
 
+from werkzeug import run_simple
+
 from gameplay.BackgammonGame import BackgammonGame
 from transcribe.TranscribeEvent import TranscribeEvent
+from ui_app.app import file_mappings, app
 from utils.dice_value_utils import deduce_dice, can_bear_off
 from utils.logger import LOG, init_logging
 from visuals import BoardVisuals
@@ -15,10 +23,6 @@ from visuals.checker_detector import count_checkers_on_field, check_for_moved_ch
 from visuals.dicedetection.dice_detector import detect_dice_value, detect_dice_sized_diff
 from visuals.movement_diff import highlight_diff, get_anchor_frame, get_next_move_frame, extract_difference, \
     detect_movement_type
-
-
-class BoardData:
-    roi = None
 
 
 def main():
@@ -36,6 +40,8 @@ def main():
 
     cap = cv2.VideoCapture(file_path)
 
+    display_results(file_path)
+
     init_logging(cap)
 
     starting_frame_pos = get_anchor_frame(cap)
@@ -50,6 +56,8 @@ def main():
     # cv2.waitKey(1)
 
     anchor_img_pos = starting_frame_pos
+    globals.last_move_time = get_time_from_frame_pos(anchor_img_pos, fps)
+    LOG.info(f'Last Move time: {globals.last_move_time}')
     LOG.info(f'anchor_img_pos={anchor_img_pos}')
 
     frames_to_skip = 19
@@ -218,11 +226,13 @@ def main():
             LOG.info('Game finished, player 1 wins')
             cv2.destroyAllWindows()
             cap.release()
+            display_results(file_path)
             break
         elif all(x >= 0 for x in BackgammonGame.get_instance().board.board):
             LOG.info('Game finished, player -1 wins')
             cv2.destroyAllWindows()
             cap.release()
+            display_results(file_path)
             break
 
         if deduced_dice_roll:
@@ -240,6 +250,7 @@ def main():
             LOG.info('Exiting')
             break
         anchor_img_pos = prev_move_pos
+        globals.last_move_time = get_time_from_frame_pos(anchor_img_pos, fps)
 
     if detected_img is not None:
         cv2.waitKey(0)
@@ -258,6 +269,21 @@ def get_time_from_frame_pos(pos, fps):
     return f"{minutes:02}:{seconds:02}"
 
 
+def start_server():
+    run_simple('127.0.0.1', 5000, app, use_reloader=False, use_debugger=True)
+
+
+def display_results(file_path):
+    server_thread = Thread(target=start_server)
+    server_thread.daemon = True
+    server_thread.start()
+
+    token = str(uuid.uuid4())
+    file_path = file_path.replace('/', '\\')
+    file_mappings[token] = file_path
+
+    # Open a browser window with the processed video
+    webbrowser.open(f'http://127.0.0.1:5000/view-video/{token}')
 
 
 if __name__ == "__main__":

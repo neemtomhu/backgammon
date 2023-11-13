@@ -1,6 +1,7 @@
 import logging
 
 from transcribe.file_writer import log_message
+from transcribe.json_data_logger import add_move_to_json
 from utils.logger import LOG
 
 
@@ -42,7 +43,9 @@ class TranscribeEvent:
 
         if len(self.moves) == 1:
             log_message(f'{self.dice_roll_log}{move_events}.')
+            add_move_to_json(self.dice_roll_log, f'{move_events}.')
         else:
             log_message(f'{self.dice_roll_log}{move_events}')
+            add_move_to_json(self.dice_roll_log, f'{move_events}.')
         self.dice_roll_log = ''
         self.moves = []
