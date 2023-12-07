@@ -3,7 +3,6 @@ import uuid
 import webbrowser
 import utils.globals as globals
 from threading import Thread
-from urllib.parse import quote
 
 import cv2
 import tkinter as tk
@@ -64,6 +63,7 @@ def main():
     area_thresh = 1000
     board_state = BackgammonGame.get_instance().board.board
 
+    is_first_move = True
     dice_roll = []
     moved_from = []
     moved_to = []
@@ -125,6 +125,12 @@ def main():
                 dice_roll = dice_values
                 LOG.info(f'Setting initial dice roll: {dice_roll}')
                 # BackgammonGame.get_instance().dice = dice_roll
+
+            if is_first_move and moved_from and moved_from[0] > 12:
+                turn = -1
+                BackgammonGame.get_instance().set_turn(turn)
+                is_first_move = False
+
             next_moved_from, next_moved_to = check_for_moved_checkers(next_image)
 
             # for pos in moved_from:

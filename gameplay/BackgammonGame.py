@@ -20,6 +20,9 @@ class BackgammonGame:
         self.dice = []  # dice roll results
         self.possible_dice = []
 
+    def set_turn(self, turn):
+        self.turn = turn
+
     def set_dice(self, dice):
         self.dice = dice
         if dice[0] == dice[1]:  # doubles
