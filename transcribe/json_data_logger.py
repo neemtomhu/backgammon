@@ -17,7 +17,7 @@ def add_move_to_json(dice_roll, moves):
         "id": "move" + str(move_id_counter),  # Generate a unique ID for the move
         "timestamp": globals.last_move_time,
         "dice_roll": dice_roll,
-        "not_ambiguous": globals.is_ambiguous,
+        "is_ambiguous": globals.is_ambiguous,
         "moves": moves
     }
     moves_data.append(move_data)
