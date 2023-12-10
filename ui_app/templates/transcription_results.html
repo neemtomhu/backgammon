@@ -20,6 +20,14 @@
             padding-left: 10px;
         }
 
+        .button-ambiguous {
+            background-color: orange;
+        }
+
+        .button-clear {
+            background-color: green;
+        }
+
         .video-player, .edit-form {
             margin-right: 20px;
             flex-shrink: 0;
@@ -37,7 +45,12 @@
     <div class="moves">
         <button onclick="downloadTranscript()">Download Transcript</button>
         {% for move in moves_data %}
-        <button data-id="{{ move.id }}" onclick="jumpToTimeAndPopulateForm('{{ loop.index0 }}', '{{ move.id }}')">[{{ move.timestamp }}] Dice: {{ move.dice_roll }} Move(s): {{ move.moves }}</button>
+        <button
+            class="{{ 'button-ambiguous' if move.is_ambiguous else 'button-clear' }}"
+            data-id="{{ move.id }}"
+            onclick="jumpToTimeAndPopulateForm('{{ loop.index0 }}', '{{ move.id }}')">
+            [{{ move.timestamp }}] Dice: {{ move.dice_roll }} Move(s): {{ move.moves }}
+        </button>
         {% endfor %}
     </div>
 
@@ -95,11 +108,13 @@
         var diceRoll = document.getElementById('diceRoll').value;
         var moves = document.getElementById('moves').value;
 
+        console.log("Moves before parsing:", moves);
         var updatedMove = {
             id: id,
-            timestamp: timestamp,  // Assuming you want to keep the timestamp editable
+            timestamp: timestamp,
             dice_roll: diceRoll,
-            moves: JSON.parse(moves)  // Convert the moves string back to an object
+            is_ambiguous: false,
+            moves: moves
         };
 
         fetch('/update-move', {
@@ -117,6 +132,8 @@
                 var button = document.querySelector('.moves button[data-id="' + id + '"]');
                 if (button) {
                     button.textContent = `[${timestamp}] Dice: ${diceRoll} Move(s): ${moves}`;
+                    button.classList.toggle('button-ambiguous', updatedMove.is_ambiguous);
+                    button.classList.toggle('button-clear', !updatedMove.is_ambiguous);
                 }
             } else {
                 console.error("Error updating move", data.message);

@@ -14,6 +14,7 @@ from gameplay.BackgammonGame import BackgammonGame
 from transcribe.TranscribeEvent import TranscribeEvent
 from ui_app.app import file_mappings, app
 from utils.dice_value_utils import deduce_dice, can_bear_off
+from utils.file_dialog import ask_for_file_path, initialize_video_capture
 from utils.logger import LOG, init_logging
 from visuals import BoardVisuals
 from visuals.BoardVisuals import BackgammonBoardVisuals
@@ -24,27 +25,24 @@ from visuals.dicedetection.dice_detector import detect_dice_value, detect_dice_s
 from visuals.movement_diff import highlight_diff, get_anchor_frame, get_next_move_frame, extract_difference
 
 
+FRAMES_TO_SKIP_INITIAL = 19
+AREA_THRESHOLD_INITIAL = 1000
+AREA_THRESHOLD_BEARING_OFF = 20000
+FRAMES_TO_SKIP_BEARING_OFF = 2
+FRAMES_TO_SKIP_STANDARD = 4
+
+
 def main():
-    root = tk.Tk()
-    root.withdraw()
+    file_path = ask_for_file_path()
 
-    file_path = filedialog.askopenfilename(
-        title="Select Video file",
-        filetypes=[
-            ("Video files", "*.mov;*.mp4"),
-            ("MOV files", "*.mov"),
-            ("MP4 files", "*.mp4"),
-        ],
-    )
-
-    cap = cv2.VideoCapture(file_path)
+    cap = initialize_video_capture(file_path)
 
     # display_results(file_path)
 
-    init_logging(cap)
-
     starting_frame_pos = get_anchor_frame(cap)
-    total_frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+
+    # total_frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+
     cap.set(cv2.CAP_PROP_POS_FRAMES, starting_frame_pos)
     ret, image = cap.read()
     fps = cap.get(cv2.CAP_PROP_FPS)
@@ -59,23 +57,23 @@ def main():
     LOG.info(f'Last Move time: {globals.last_move_time}')
     LOG.info(f'anchor_img_pos={anchor_img_pos}')
 
-    frames_to_skip = 19
-    area_thresh = 1000
+    frames_to_skip = FRAMES_TO_SKIP_INITIAL
+    area_thresh = AREA_THRESHOLD_INITIAL
     board_state = BackgammonGame.get_instance().board.board
 
     is_first_move = True
     dice_roll = []
     moved_from = []
     moved_to = []
-    # turn = BackgammonGame.get_instance().turn
 
     while True:
         if bearing_off(board_state):
             if sum(abs(x) for x in board_state) < 16:
-                frames_to_skip = 2
-                area_thresh = 20000
+                frames_to_skip = FRAMES_TO_SKIP_BEARING_OFF
+                area_thresh = AREA_THRESHOLD_BEARING_OFF
             else:
-                frames_to_skip = 4
+                frames_to_skip = FRAMES_TO_SKIP_STANDARD
+
         cap.set(cv2.CAP_PROP_POS_FRAMES, anchor_img_pos)
         LOG.debug(f'anchor_img_pos={get_time_from_frame_pos(anchor_img_pos, fps)}')
         ret, image = cap.read()
@@ -193,14 +191,8 @@ def main():
 
         LOG.info(f'Detected dice roll: {dice_roll}, moved_from={moved_from}, moved_to={moved_to}')
 
-        # if dice_values and not dice_roll:
-        #     dice_roll = dice_values
-        #     LOG.info(f'Setting initial dice roll: {dice_roll}')
-        #     # BackgammonGame.get_instance().dice = dice_roll
-        # if dice_roll and moved_from and moved_to:
-            # LOG.info(f'Making moves: dice_values={dice_roll}, moved_from={moved_from}, moved_to={moved_to}')
         board_state = BackgammonGame.get_instance().board.board
-        # turn = BackgammonGame.get_instance().turn
+
         deduced_dice_roll, moved_from, moved_to = deduce_dice(dice_roll, moved_from, moved_to, board_state, turn)
         moved_from.sort(reverse=(turn == -1))
         moved_to.sort(reverse=(turn == -1))
@@ -217,7 +209,7 @@ def main():
         LOG.info(f'Making moves: dice_values={deduced_dice_roll}, moved_from={moved_from}, moved_to={moved_to}')
 
         BackgammonGame.get_instance().set_dice(deduced_dice_roll)
-        TranscribeEvent.get_instance().set_dice_roll(deduced_dice_roll)
+
         # LOG.info(f'Dice roll: {deduced_dice_roll}')
         while moved_from:
             for f_m in moved_from:
@@ -230,6 +222,7 @@ def main():
 
         for i in range(25):
             BoardVisuals.BackgammonBoardVisuals.fields[i].checkers = abs(BackgammonGame.get_instance().board.board[i])
+
         BoardVisuals.BackgammonBoardVisuals.fields[0].checkers += abs(BackgammonGame.get_instance().board.board[25])
 
         if all(x <= 0 for x in BackgammonGame.get_instance().board.board):
@@ -248,10 +241,6 @@ def main():
         if deduced_dice_roll:
             anchor_img_pos = next_movement_frame_pos
             continue
-        # if dice_roll:
-        #     dice_roll = sorted(dice_values)
-        #     BackgammonGame.get_instance().set_dice(dice_roll)
-        # BackgammonGame.get_instance().switch_turn()
 
         LOG.info(f'dice_roll={dice_roll}, moved_from={moved_from}, moved_to={moved_to}')
 

@@ -1,4 +1,5 @@
 import logging
+from collections import Counter
 
 from transcribe.file_writer import log_message
 from transcribe.json_data_logger import add_move_to_json
@@ -26,26 +27,31 @@ class TranscribeEvent:
         self.moves.append(move)
 
     def log_event(self):
-        move_events = ''
-        logged_moves = []
-        for move in self.moves:
-            if move in logged_moves:
-                continue
-            if move[0] in [0, 25]:
-                move[0] = 'bar'
-            if move[1] in [0, 25]:
-                move[1] = 'off'
-            if self.moves.count(move) > 1:
-                move_events += f' {move[0]}({self.moves.count(move)})'
-            else:
-                move_events += f' {move[0]}/{move[1]}'
-            logged_moves.append(move)
+        move_counter = Counter(map(tuple, self.moves))
 
-        if len(self.moves) == 1:
+        move_events = ''
+        for move, count in move_counter.items():
+            # Convert special positions to 'bar' and 'off'
+            start, end = move
+            if start in [0, 25]:
+                start = 'bar'
+            if end in [0, 25]:
+                end = 'off'
+
+            # Format the move
+            move_str = f'{start}/{end}'
+            if count > 1:
+                move_str += f'({count})'
+
+            move_events += f' {move_str}'
+
+        if len(move_events.strip().split()) == 1:
             log_message(f'{self.dice_roll_log}{move_events}.')
             add_move_to_json(self.dice_roll_log, f'{move_events}.')
         else:
             log_message(f'{self.dice_roll_log}{move_events}')
-            add_move_to_json(self.dice_roll_log, f'{move_events}.')
+            add_move_to_json(self.dice_roll_log, f'{move_events}')
+
+        # Reset the log and moves
         self.dice_roll_log = ''
         self.moves = []
