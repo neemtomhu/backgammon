@@ -36,7 +36,7 @@ class TranscribeEvent:
             if move[1] in [0, 25]:
                 move[1] = 'off'
             if self.moves.count(move) > 1:
-                move_events += f' {move[0]}/{move[1]}({self.moves.count(move)})'
+                move_events += f' {move[0]}({self.moves.count(move)})'
             else:
                 move_events += f' {move[0]}/{move[1]}'
             logged_moves.append(move)

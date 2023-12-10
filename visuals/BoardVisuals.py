@@ -1,7 +1,5 @@
 import math
 
-import numpy as np
-
 from utils.logger import LOG
 from visuals.Observable import Observable
 
@@ -128,10 +126,3 @@ class Field:
         self.endpoints = [int(endpoint) for endpoint in endpoints]  # tuple representing the center line of the field
         self.field_number = field_number  # integer between 1 and 24
         self.checkers = checkers
-
-
-class Checker:  # TODO this may be removed
-    def __init__(self, center, color, field_number):
-        self.center = center  # tuple representing the center of the checker
-        self.color = color  # string representing the color of the checker
-        self.field_number = field_number  # integer between 1 and 24

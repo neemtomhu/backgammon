@@ -19,9 +19,9 @@ from visuals import BoardVisuals
 from visuals.BoardVisuals import BackgammonBoardVisuals
 from visuals.board_detector import detect_backgammon_board
 from visuals.checker_detector import count_checkers_on_field, check_for_moved_checkers, bearing_off
-from visuals.dicedetection.dice_detector import detect_dice_value, detect_dice_sized_diff
-from visuals.movement_diff import highlight_diff, get_anchor_frame, get_next_move_frame, extract_difference, \
-    detect_movement_type
+from visuals.dicedetection.dice_detector import detect_dice_value, detect_dice_sized_diff, detect_dice_values, \
+    detect_dice
+from visuals.movement_diff import highlight_diff, get_anchor_frame, get_next_move_frame, extract_difference
 
 
 def main():
@@ -39,7 +39,7 @@ def main():
 
     cap = cv2.VideoCapture(file_path)
 
-    display_results(file_path)
+    # display_results(file_path)
 
     init_logging(cap)
 
@@ -120,7 +120,9 @@ def main():
             diff_img = extract_difference(image, next_image)
 
             # dice_values, m_from, next_moved_to = detect_movement_type(diff_img)
-            dice_values = detect_movement_type(diff_img)
+            # dice_values = detect_dice_values(diff_img)
+            dice_values = detect_dice(diff_img)
+
             if dice_values and not dice_roll:
                 dice_roll = dice_values
                 LOG.info(f'Setting initial dice roll: {dice_roll}')
@@ -203,9 +205,11 @@ def main():
         moved_from.sort(reverse=(turn == -1))
         moved_to.sort(reverse=(turn == -1))
 
+        if deduced_dice_roll == dice_roll:
+            LOG.info('Correct dice roll detected')
+
         LOG.info(f'Deduced dice roll: {deduced_dice_roll}, moved_from={moved_from}, moved_to={moved_to}')
         if not deduced_dice_roll:
-            # TODO handle/log
             LOG.info(f'Not enough info, moving on, deduced_dice_roll={deduced_dice_roll}')
             anchor_img_pos = next_movement_frame_pos
             continue

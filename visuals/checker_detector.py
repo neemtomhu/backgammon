@@ -76,7 +76,7 @@ def count_checkers_on_field(img, field):
     y1, y2 = sorted([int(field.endpoints[1] - offset), int(field.endpoints[3] + offset)])
     roi = img[y1:y2, x1:x2]
     # cv2.imshow('Field ROI', roi)
-
+    # cv2.waitKey(1)
     closed = get_closed_image(roi)
     # cv2.imshow(f'Closed roi', closed)
     # cv2.waitKey(1)

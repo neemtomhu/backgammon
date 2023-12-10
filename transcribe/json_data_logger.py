@@ -8,15 +8,16 @@ move_id_counter = 0  # Initialize a counter for move IDs
 
 def add_move_to_json(dice_roll, moves):
     global moves_data, move_id_counter
-    from utils.globals import last_move_time
+    import utils.globals as globals
 
-    LOG.info(last_move_time)
+    LOG.info(globals.last_move_time)
     move_id_counter += 1  # Increment the ID counter for each new move
 
     move_data = {
         "id": "move" + str(move_id_counter),  # Generate a unique ID for the move
-        "timestamp": last_move_time,
+        "timestamp": globals.last_move_time,
         "dice_roll": dice_roll,
+        "not_ambiguous": globals.is_ambiguous,
         "moves": moves
     }
     moves_data.append(move_data)
@@ -27,3 +28,5 @@ def add_move_to_json(dice_roll, moves):
 
     with open('./result/moves_data.json', 'w') as file:
         json.dump(moves_data, file, indent=4)
+
+    globals.is_ambiguous = True

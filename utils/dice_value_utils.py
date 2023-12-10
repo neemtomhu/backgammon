@@ -16,11 +16,13 @@ def possible_dice_values_from_move(moved_from, moved_to):
     if len(distances) == 2 and max(distances) <= 6 and distances[0] != distances[1]:
         return {tuple(sorted(distances))}
 
-    # Start with all combinations and remove those that are not possible
-    # If more than 2 checkers were moved or the distance is greater than 11, it is only possible by doubles, remove all non doubles
+    # Start with all combinations and remove those that are not possible If more than 2 checkers were moved or the
+    # distance is greater than 11, it is only possible by doubles, remove all non doubles
     if len(moved_from) > 2 or sum(distances) > 11 or (len(set(distances)) == 1 and len(distances) > 1 and 0 not in moved_to and 25 not in moved_to):
-        all_dice_combinations = {combo for combo in all_dice_combinations if combo[0] == combo[1] and sum(distances) <= combo[0] * 4}
-        return sorted(list(all_dice_combinations), key=sort_dice_combinations_by_value)
+        all_dice_combinations = {combo for combo in all_dice_combinations if
+                                 combo[0] == combo[1] and sum(distances) <= combo[0] * 4}
+        sorted_combinations = sorted(list(all_dice_combinations), key=sort_dice_combinations_by_value)
+        return {sorted_combinations[0]} if sorted_combinations else {}
 
     # for distance in distances:
     all_dice_combinations = {combo for combo in all_dice_combinations if sum(combo) >= sum(distances)}
@@ -160,6 +162,8 @@ def deduce_dice(detected_dice, moved_from, moved_to, board_state, turn):
     if sum(detected_dice) == total_movement and 0 not in detected_dice:
         LOG.info(f'{sum(detected_dice)} == {total_movement}')
         if all(is_move_possible(f, t, d, board_state) for f, t, d in zip(moved_from, moved_to, detected_dice)):
+            import utils.globals as globals
+            globals.is_ambiguous = False
             return detected_dice, moved_from, moved_to
 
     # If any of the moved_to is the opponents checker, then the checker has been hit
@@ -201,6 +205,8 @@ def deduce_dice(detected_dice, moved_from, moved_to, board_state, turn):
     if len(moved_from) == 1 and 4 < total_movement <= 24:
         LOG.info(f'{len(moved_from)} == 1')
         if is_move_possible(moved_from[0], moved_to[0], sum(detected_dice), board_state):
+            import utils.globals as globals
+            globals.is_ambiguous = False
             return list(detected_dice), moved_from, moved_to
 
     # If two moves are detected, but they don't match the detected dice
@@ -213,10 +219,12 @@ def deduce_dice(detected_dice, moved_from, moved_to, board_state, turn):
 
         for dice_combination in sorted_possible_values:
             if all(is_move_possible(f, t, d, board_state) for f, t, d in zip(moved_from, moved_to, dice_combination)):
+                if len(sorted_possible_values) == 1:
+                    import utils.globals as globals
+                    globals.is_ambiguous = False
                 return list(dice_combination), moved_from, moved_to
 
     # If no dice values are detected, deduce from the moves
-    # if not detected_dice:
     possible_values = possible_dice_values_from_move(moved_from, moved_to)
 
     # Convert to a list and sort if necessary
@@ -224,6 +232,9 @@ def deduce_dice(detected_dice, moved_from, moved_to, board_state, turn):
 
     for dice_combination in sorted_possible_values:
         if all(is_move_possible(f, t, d, board_state) for f, t, d in zip(moved_from, moved_to, dice_combination)):
+            if len(sorted_possible_values) == 1:
+                import utils.globals as globals
+                globals.is_ambiguous = False
             return list(dice_combination), moved_from, moved_to
 
     # If nothing matches, return an error or a default value
