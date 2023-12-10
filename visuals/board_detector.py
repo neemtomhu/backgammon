@@ -181,10 +181,9 @@ def detect_backgammon_board(input_img):
 
     LOG.info('Detecting board')
 
-    input_img = rotate_if_needed(input_img)
     closed = get_closed_image(input_img)
     predicted_radius = predict_checker_diameter(closed)
-    circles = find_circles(closed, predicted_radius)
+    circles = find_circles(closed, predicted_radius, param1=200)
     radii = [circle[2] for circle in circles[0]]
     diameters = [2 * radius for radius in radii]
     median_diameter = np.median(diameters)
@@ -203,8 +202,8 @@ def detect_backgammon_board(input_img):
         for i in circles[0, :]:
             cv2.circle(detected_img, (i[0], i[1]), i[2], (0, 255, 0), 2)
     # cv2.imshow('Circles', detected_img)
+    # cv2.waitKey(1)
 
-    # orientation = get_board_orientation(groups)
     paired_groups = find_opposite_groups(groups, 5)
     ordered_paired_groups = order_checkers(paired_groups)
 
@@ -218,13 +217,6 @@ def detect_backgammon_board(input_img):
     # cv2.waitKey(1)
 
     return detected_img
-
-
-def rotate_if_needed(input_img):
-    if input_img.shape[0] < input_img.shape[1]:
-        return rotate_input_image_clockwise(input_img)
-    LOG.info(f'Input image height: {input_img.shape[0]}, width: {input_img.shape[1]}')
-    return input_img
 
 
 def predict_checker_diameter(closed):
