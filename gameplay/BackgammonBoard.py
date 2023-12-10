@@ -1,5 +1,10 @@
 from utils.logger import LOG
 
+WHITE_BAR = 0
+BLACK_BAR = 25
+WHITE_PLAYER = 1
+BLACK_PLAYER = -1
+
 
 class BackgammonBoard:
     def __init__(self):
@@ -11,8 +16,9 @@ class BackgammonBoard:
         ]
 
     def has_checkers_on_bar(self, player):
-        LOG.debug(f'Player has checkers on bar: {self.board[0 if player == 1 else 25] > 0}')
-        return self.board[0 if player == 1 else 25] > 0
+        bar_position = WHITE_BAR if player == WHITE_PLAYER else BLACK_BAR
+        LOG.debug(f'Player {player} has checkers on bar: {self.board[bar_position] > 0}')
+        return self.board[bar_position] > 0
 
     def point_is_blocked(self, point, player):
         return self.board[point] * player < -1
