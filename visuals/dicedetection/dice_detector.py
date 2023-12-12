@@ -4,45 +4,6 @@ import cv2
 import numpy as np
 
 from utils.logger import LOG
-from visuals import BoardVisuals
-from visuals.BoardVisuals import BackgammonBoardVisuals
-
-
-def detect_dice_sized_diff(img, min_radius_multiplier, max_radius_multiplier, param2=17):
-    x1, y1 = BackgammonBoardVisuals.corners[0][0], BackgammonBoardVisuals.corners[0][1]
-    x2, y2 = BackgammonBoardVisuals.corners[3][0], BackgammonBoardVisuals.corners[3][1]
-    roi_img = img[y1:y2, x1:x2]
-
-    # Load the image
-    gray = cv2.cvtColor(roi_img, cv2.COLOR_BGR2GRAY)
-
-    # Preprocessing
-    blurred = cv2.GaussianBlur(gray, (15, 15), 0)
-
-    # Detect circles (potential dice)
-    min_radius = int(BoardVisuals.BackgammonBoardVisuals.checker_diameter * min_radius_multiplier)
-    max_radius = int(BoardVisuals.BackgammonBoardVisuals.checker_diameter * max_radius_multiplier)
-    LOG.debug(f'Min radius: {min_radius}, Max radius: {max_radius}')
-
-    circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT,
-                               dp=1.2,
-                               minDist=min_radius * 2,
-                               param1=50,
-                               param2=param2,
-                               minRadius=min_radius,
-                               maxRadius=max_radius)
-
-    # If circles are detected, add the offset to each circle's coordinates
-    if circles is not None:
-        img2 = img.copy()
-        circles = np.round(circles[0, :]).astype("int")
-        for circle in circles:
-            circle[0] += x1  # add the x offset
-            circle[1] += y1  # add the y offset
-            cv2.circle(img2, (circle[0], circle[1]), circle[2], (0, 255, 0), 1)
-        # cv2.imshow('Circles', img2)
-        # cv2.waitKey(1)
-    return img, circles
 
 
 def detect_dice_value(img, circles):
@@ -187,21 +148,4 @@ def detect_dice(image):
     cv2.imshow("Detected Dice", image)
     cv2.waitKey(1)
 
-    return dice_values
-
-
-def detect_dice_values(img):
-    dice_values = []
-
-    # Look fod dice sized changes
-    detected_img, circles = detect_dice_sized_diff(
-        img,
-        min_radius_multiplier=0.3,
-        max_radius_multiplier=0.4,
-        param2=17)
-    if circles is not None:
-        LOG.info('Dice roll detected')
-        dice_values = detect_dice_value(detected_img, circles)
-        # return "Dice roll"
-    LOG.debug(f'dice_values: {dice_values}')
     return dice_values

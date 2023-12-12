@@ -20,8 +20,7 @@ from visuals import BoardVisuals
 from visuals.BoardVisuals import BackgammonBoardVisuals
 from visuals.board_detector import detect_backgammon_board
 from visuals.checker_detector import count_checkers_on_field, check_for_moved_checkers, bearing_off
-from visuals.dicedetection.dice_detector import detect_dice_value, detect_dice_sized_diff, detect_dice_values, \
-    detect_dice
+from visuals.dicedetection.dice_detector import detect_dice
 from visuals.movement_diff import highlight_diff, get_anchor_frame, get_next_move_frame, extract_difference
 
 
