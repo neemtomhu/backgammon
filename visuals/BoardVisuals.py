@@ -1,15 +1,13 @@
 import math
 
 from utils.logger import LOG
-from visuals.Observable import Observable
 
 
-class BackgammonBoardVisuals(Observable):
+class BackgammonBoardVisuals:
     _instance = None
 
     corners = None  # top_left, top_right, bottom_left, bottom_right
     fields = None
-    orientation = None
     checker_diameter = None
 
     def __new__(cls, *args, **kwargs):
@@ -17,6 +15,11 @@ class BackgammonBoardVisuals(Observable):
             LOG.debug('Initializing board visuals')
             cls._instance = super(BackgammonBoardVisuals, cls).__new__(cls)
         return cls._instance
+
+    @staticmethod
+    def initialize(corners):
+        BackgammonBoardVisuals.corners = corners
+        BackgammonBoardVisuals.fields = [None] * 26
 
     def get_field_by_id(self, field_id):
         return self.fields[field_id]
@@ -41,12 +44,6 @@ class BackgammonBoardVisuals(Observable):
                     nearest_field_id = field_id
 
         return nearest_field_id
-
-    @staticmethod
-    def initialize(corners, orientation):
-        BackgammonBoardVisuals.corners = corners
-        BackgammonBoardVisuals.fields = [None] * 26
-        BackgammonBoardVisuals.orientation = orientation
 
     def set_starting_fields_from_checker_groups(self, ordered_paired_groups):
 
@@ -97,15 +94,15 @@ class BackgammonBoardVisuals(Observable):
     def get_field_endpoints_from_group(self, checker_group_pair):
         group1 = checker_group_pair[0]
         group2 = checker_group_pair[1]
-        if self.orientation == 'vertical':
-            field_1_x1 = self.corners[0][0]
-            field_1_y1 = group1[0][:2][1]
-            field_1_x2 = (self.corners[0][0] + self.corners[3][0]) / 2
-            field_1_y2 = (field_1_y1 + group2[-1][:2][1]) / 2
-            field_2_x1 = self.corners[1][0]
-            field_2_y1 = group2[-1][:2][1]
-            field_2_x2 = field_1_x2
-            field_2_y2 = field_1_y2
+
+        field_1_x1 = self.corners[0][0]
+        field_1_y1 = group1[0][:2][1]
+        field_1_x2 = (self.corners[0][0] + self.corners[3][0]) / 2
+        field_1_y2 = (field_1_y1 + group2[-1][:2][1]) / 2
+        field_2_x1 = self.corners[1][0]
+        field_2_y1 = group2[-1][:2][1]
+        field_2_x2 = field_1_x2
+        field_2_y2 = field_1_y2
 
         return field_1_x1, field_1_y1, field_1_x2, field_1_y2, field_2_x1, field_2_y1, field_2_x2, field_2_y2
 

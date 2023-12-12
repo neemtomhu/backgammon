@@ -49,8 +49,8 @@ def main():
     detected_img = detect_backgammon_board(image)
     board_roi = BackgammonBoardVisuals.corners
 
-    # cv2.imshow('Detected board', detected_img)
-    # cv2.waitKey(1)
+    cv2.imshow('Detected board', detected_img)
+    cv2.waitKey(1)
 
     anchor_img_pos = starting_frame_pos
     globals.last_move_time = get_time_from_frame_pos(anchor_img_pos, fps)

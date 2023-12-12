@@ -126,28 +126,6 @@ def draw_circle_groups_pairs(img, group_pairs):
     return output
 
 
-def get_board_orientation(groups):
-    LOG.info('Determining board orientation')
-    horizontal_count = 0
-    vertical_count = 0
-
-    for group1, group2 in itertools.combinations(groups, 2):
-        avg_x1 = np.mean([circle[0] for circle in group1])
-        avg_y1 = np.mean([circle[1] for circle in group1])
-        avg_x2 = np.mean([circle[0] for circle in group2])
-        avg_y2 = np.mean([circle[1] for circle in group2])
-
-        if abs(avg_x1 - avg_x2) < abs(avg_y1 - avg_y2):
-            vertical_count += 1
-        else:
-            horizontal_count += 1
-
-    orientation = "horizontal" if horizontal_count > vertical_count else "vertical"
-    LOG.info(f"The board orientation is: {orientation}")
-
-    return orientation
-
-
 def get_board_corners(paired_groups):
     circle_groups = [group for groups in paired_groups for group in groups]
     all_circles = [circle for group in circle_groups for circle in group]
@@ -177,12 +155,11 @@ def draw_rectangle(input_img, corners):
 
 
 def detect_backgammon_board(input_img):
-    BoardVisuals.BackgammonBoardVisuals.initialize((0, 0), "vertical")
 
     LOG.info('Detecting board')
 
     closed = get_closed_image(input_img)
-    predicted_radius = predict_checker_diameter(closed)
+    predicted_radius = predict_checker_radius(closed)
     circles = find_circles(closed, predicted_radius, param1=200)
     radii = [circle[2] for circle in circles[0]]
     diameters = [2 * radius for radius in radii]
@@ -195,31 +172,22 @@ def detect_backgammon_board(input_img):
 
     groups = group_circles_based_on_distance(circles[0], max_distance)
 
-    # Draw the detected circles on a copy of the input image
-    detected_img = input_img.copy()
-    if circles is not None:
-        circles = np.uint16(np.around(circles))
-        for i in circles[0, :]:
-            cv2.circle(detected_img, (i[0], i[1]), i[2], (0, 255, 0), 2)
-    # cv2.imshow('Circles', detected_img)
-    # cv2.waitKey(1)
-
     paired_groups = find_opposite_groups(groups, 5)
     ordered_paired_groups = order_checkers(paired_groups)
 
     # BoardVisuals.BackgammonBoardVisuals.orientation = orientation
     paired_groups_image = draw_circle_groups_pairs(input_img, ordered_paired_groups)
-    BoardVisuals.BackgammonBoardVisuals.corners = get_board_corners(paired_groups)
+    BoardVisuals.BackgammonBoardVisuals.initialize(get_board_corners(paired_groups))
     detected_board_image = draw_rectangle(paired_groups_image, BoardVisuals.BackgammonBoardVisuals.corners)
     detected_img = draw_group_axes(detected_board_image, ordered_paired_groups)
     LOG.info('Board detected')
-    # cv2.imshow('Detected board', detected_img)
-    # cv2.waitKey(1)
+    cv2.imshow('Detected board', detected_img)
+    cv2.waitKey(1)
 
     return detected_img
 
 
-def predict_checker_diameter(closed):
+def predict_checker_radius(closed):
     circles = cv2.HoughCircles(closed, cv2.HOUGH_GRADIENT, dp=1, minDist=20, param1=25, param2=35, minRadius=12,
                                maxRadius=29)
     radii = [circle[2] for circle in circles[0]]
