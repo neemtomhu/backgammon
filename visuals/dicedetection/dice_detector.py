@@ -56,6 +56,8 @@ def detect_dice_value(img, circles):
                 cv2.circle(img, (adjusted_x, adjusted_y), int(keypoint.size), (0, 0, 255), 2)
 
         dice_values.sort()
+        cv2.imshow('Detected_dice', img)
+        cv2.waitKey(1)
         return dice_values
 
     return []
