@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Backgammon game transcription</title>
+    <style>
+        .container {
+            display: flex;
+            justify-content: start;
+        }
+
+        .moves {
+            margin-right: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .moves button {
+            margin-bottom: 10px;
+            text-align: left;
+            padding-left: 10px;
+        }
+
+        .button-ambiguous {
+            background-color: orange;
+        }
+
+        .button-clear {
+            background-color: green;
+        }
+
+        .video-player, .edit-form {
+            margin-right: 20px;
+            flex-shrink: 0;
+        }
+
+        .edit-form {
+            display: none; /* Initially hidden */
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <div class="moves">
+        <button onclick="downloadTranscript()">Download Transcript</button>
+        {% for move in moves_data %}
+        <button
+            class="{{ 'button-ambiguous' if move.is_ambiguous else 'button-clear' }}"
+            data-id="{{ move.id }}"
+            onclick="jumpToTimeAndPopulateForm('{{ loop.index0 }}', '{{ move.id }}')">
+            [{{ move.timestamp }}] Dice: {{ move.dice_roll }} Move(s): {{ move.moves }}
+        </button>
+        {% endfor %}
+    </div>
+
+    <div class="video-player">
+        <video id="myVideo" width="750" controls>
+            <source src="{{ url_for('serve_video', token=token) }}" type="video/mp4">
+            Your browser does not support HTML5 video.
+        </video>
+    </div>
+
+    <div class="edit-form" id="editForm">
+        <h3>Edit Move</h3>
+        <label for="timestamp">Timestamp:</label>
+        <input type="text" id="timestamp" name="timestamp" readonly><br><br>
+        <label for="diceRoll">Dice Roll:</label>
+        <input type="text" id="diceRoll" name="diceRoll"><br><br>
+        <label for="moves">Moves:</label>
+        <input type="text" id="moves" name="moves"><br><br>
+        <input type="hidden" id="moveId" name="moveId">
+        <button onclick="saveChanges()">Save Changes</button>
+    </div>
+</div>
+
+<script>
+    var movesData = {{ moves_data | tojson | safe }};
+
+    function jumpToTimeAndPopulateForm(index, id) {
+        var move = movesData[index];
+        var timestamp = move.timestamp;
+        var diceRoll = move.dice_roll;
+        var moves = move.moves;
+
+        var video = document.getElementById("myVideo");
+        var timeParts = timestamp.split(':');
+        var seconds = (+timeParts[0]) * 60 + (+timeParts[1]);
+        video.currentTime = seconds;
+        video.play();
+
+        document.getElementById('timestamp').value = timestamp;
+        document.getElementById('diceRoll').value = diceRoll;
+        document.getElementById('moves').value = moves;
+        document.getElementById('moveId').value = id;
+
+        document.getElementById('editForm').style.display = 'block';
+
+        var button = document.querySelector('.moves button[data-id="' + id + '"]');
+        if (button) {
+            button.textContent = `[${timestamp}] Dice: ${diceRoll} Move(s): ${moves}`;
+        }
+    }
+
+    function saveChanges() {
+        var id = document.getElementById('moveId').value;  // Get the stored move ID
+        var timestamp = document.getElementById('timestamp').value;
+        var diceRoll = document.getElementById('diceRoll').value;
+        var moves = document.getElementById('moves').value;
+
+        console.log("Moves before parsing:", moves);
+        var updatedMove = {
+            id: id,
+            timestamp: timestamp,
+            dice_roll: diceRoll,
+            is_ambiguous: false,
+            moves: moves
+        };
+
+        fetch('/update-move', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(updatedMove)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log("Move updated successfully");
+                // Update the relevant button text or any other necessary attributes
+                var button = document.querySelector('.moves button[data-id="' + id + '"]');
+                if (button) {
+                    button.textContent = `[${timestamp}] Dice: ${diceRoll} Move(s): ${moves}`;
+                    button.classList.toggle('button-ambiguous', updatedMove.is_ambiguous);
+                    button.classList.toggle('button-clear', !updatedMove.is_ambiguous);
+                }
+            } else {
+                console.error("Error updating move", data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
+    function downloadTranscript() {
+        var transcriptText = movesData.map(move => {
+            return `${move.dice_roll}${move.moves}`;
+        }).join('\n');
+
+        var blob = new Blob([transcriptText], {type: "text/plain;charset=utf-8"});
+        var url = URL.createObjectURL(blob);
+
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'transcript.txt';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+</script>
+
+</body>
+</html>
