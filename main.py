@@ -35,8 +35,6 @@ def main():
 
     starting_frame_pos = get_anchor_frame(cap)
 
-    # total_frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
-
     cap.set(cv2.CAP_PROP_POS_FRAMES, starting_frame_pos)
     ret, image = cap.read()
     fps = cap.get(cv2.CAP_PROP_FPS)
@@ -84,8 +82,6 @@ def main():
             if not moved_from:
                 LOG.info(f'Checking for moved checkers')
                 moved_from, moved_to = check_for_moved_checkers(image)
-                # if bearing_off(board_state):
-                #     moved_from = [m for m in moved_from if m * turn > 0]
 
             if moved_from and 0 in moved_to:
                 for m_t in moved_to:
@@ -103,17 +99,12 @@ def main():
             next_movement_frame_pos = get_next_move_frame(cap, prev_move_pos, board_roi, area_thresh=area_thresh, frames_to_skip=frames_to_skip)
 
             LOG.info(f'next_movement_frame_pos={get_time_from_frame_pos(next_movement_frame_pos, fps)}')
-            # cap.set(cv2.CAP_PROP_POS_FRAMES, next_movement_frame_pos)
             ret, next_image = cap.read()
             if not ret:
                 break
-            # cv2.imshow('Next movement', next_image)
-            # cv2.waitKey(1)
 
             diff_img = extract_difference(image, next_image)
 
-            # dice_values, m_from, next_moved_to = detect_movement_type(diff_img)
-            # dice_values = detect_dice_values(diff_img)
 
             dice_values = detect_dice(diff_img)
 
@@ -171,12 +162,6 @@ def main():
                     break
             if opponent_moved:
                 break
-                # _sum += BackgammonGame.get_instance().board.board[m_f]
-            # LOG.info(f'_sum={_sum}, turn={turn}')
-            # if _sum * turn < 0:
-            #     LOG.info(f'Opponents move detected, braking')
-            #     # prev_move_pos = next_movement_frame_pos
-            #     break
 
             prev_move_pos = next_movement_frame_pos
             moved_from = next_moved_from
@@ -202,7 +187,6 @@ def main():
         LOG.info(f'Making moves: dice_values={deduced_dice_roll}, moved_from={moved_from}, moved_to={moved_to}')
 
         BackgammonGame.get_instance().set_dice(deduced_dice_roll)
-
 
         while moved_from:
             for f_m in moved_from:
