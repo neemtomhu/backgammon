@@ -1,28 +1,23 @@
 import time
 import uuid
 import webbrowser
-import utils.globals as globals
 from threading import Thread
 
 import cv2
-import tkinter as tk
-from tkinter import filedialog
-
 from werkzeug import run_simple
 
+import utils.globals as globals
 from gameplay.BackgammonGame import BackgammonGame
-from transcribe.TranscribeEvent import TranscribeEvent
 from ui_app.app import file_mappings, app
-from utils.dice_value_utils import deduce_dice, can_bear_off
+from utils.dice_value_utils import deduce_dice
 from utils.file_dialog import ask_for_file_path, initialize_video_capture
-from utils.logger import LOG, init_logging
+from utils.logger import LOG
 from visuals import BoardVisuals
 from visuals.BoardVisuals import BackgammonBoardVisuals
 from visuals.board_detector import detect_backgammon_board
-from visuals.checker_detector import count_checkers_on_field, check_for_moved_checkers, bearing_off
+from visuals.checker_detector import check_for_moved_checkers, bearing_off
 from visuals.dicedetection.dice_detector import detect_dice
-from visuals.movement_diff import highlight_diff, get_anchor_frame, get_next_move_frame, extract_difference
-
+from visuals.movement_diff import get_anchor_frame, get_next_move_frame, extract_difference
 
 FRAMES_TO_SKIP_INITIAL = 19
 AREA_THRESHOLD_INITIAL = 1000
@@ -66,6 +61,7 @@ def main():
     moved_to = []
 
     while True:
+
         if bearing_off(board_state):
             if sum(abs(x) for x in board_state) < 16:
                 frames_to_skip = FRAMES_TO_SKIP_BEARING_OFF
@@ -118,6 +114,7 @@ def main():
 
             # dice_values, m_from, next_moved_to = detect_movement_type(diff_img)
             # dice_values = detect_dice_values(diff_img)
+
             dice_values = detect_dice(diff_img)
 
             if dice_values and not dice_roll:
@@ -125,6 +122,7 @@ def main():
                 LOG.info(f'Setting initial dice roll: {dice_roll}')
                 # BackgammonGame.get_instance().dice = dice_roll
 
+            # identify the starting player
             if is_first_move and moved_from and moved_from[0] > 12:
                 turn = -1
                 BackgammonGame.get_instance().set_turn(turn)
@@ -162,10 +160,6 @@ def main():
                         moved_to.append(m_f)
                 # moved_to.append(new_move_from[0])
                 # moved_to.remove(0)
-            # TODO might need to check for hits as well
-            # _sum = 0
-
-            # moved_from = [i for i in moved_from if BackgammonGame.get_instance().board.board[i] * turn > 0]
 
             opponent_moved = False
             for m_f in new_move_from:
@@ -209,7 +203,7 @@ def main():
 
         BackgammonGame.get_instance().set_dice(deduced_dice_roll)
 
-        # LOG.info(f'Dice roll: {deduced_dice_roll}')
+
         while moved_from:
             for f_m in moved_from:
                 for t_m in moved_to:
@@ -282,6 +276,12 @@ def display_results(file_path):
 
     # Open a browser window with the processed video
     webbrowser.open(f'http://127.0.0.1:5000/view-video/{token}')
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("Shutting down...")
+        server_thread.join()
 
 
 if __name__ == "__main__":
